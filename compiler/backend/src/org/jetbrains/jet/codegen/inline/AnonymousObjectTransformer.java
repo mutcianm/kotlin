@@ -187,7 +187,7 @@ public class AnonymousObjectTransformer {
 
         MethodInliner inliner = new MethodInliner(sourceNode, parameters, inliningContext.subInline(inliningContext.nameGenerator.subGenerator("lambda")),
                                                   remapper, isSameModule, "Transformer for " + invocation.getOwnerInternalName());
-        InlineResult result = inliner.doInline(resultVisitor, new LocalVarRemapper(parameters, 0), false);
+        InlineResult result = inliner.doInline(resultVisitor, new LocalVarRemapper(parameters, 0), false, false);
         resultVisitor.visitMaxs(-1, -1);
         return result;
     }
@@ -272,7 +272,7 @@ public class AnonymousObjectTransformer {
 
         MethodInliner inliner = new MethodInliner(constructor, constructorParameters, inliningContext.subInline(inliningContext.nameGenerator.subGenerator("lambda")),
                                                   remapper, isSameModule, "Transformer for constructor of " + invocation.getOwnerInternalName());
-        InlineResult result = inliner.doInline(capturedFieldInitializer, new LocalVarRemapper(constructorParameters, 0), false);
+        InlineResult result = inliner.doInline(capturedFieldInitializer, new LocalVarRemapper(constructorParameters, 0), false, false);
         constructorVisitor.visitMaxs(-1, -1);
 
         AsmUtil.genClosureFields(capturedFieldsToGenerate, classBuilder);

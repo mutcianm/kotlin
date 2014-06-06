@@ -41,6 +41,7 @@ import org.jetbrains.jet.lang.diagnostics.DiagnosticUtils;
 import org.jetbrains.jet.lang.evaluate.EvaluatePackage;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingContext;
+import org.jetbrains.jet.lang.resolve.BindingContextUtils;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.model.*;
 import org.jetbrains.jet.lang.resolve.calls.util.CallMaker;
@@ -1574,6 +1575,9 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     public StackValue visitReturnExpression(@NotNull JetReturnExpression expression, StackValue receiver) {
         JetExpression returnedExpression = expression.getReturnedExpression();
         if (returnedExpression != null) {
+            CallableMemberDescriptor descriptor = getContext().getContextDescriptor();
+            Type returnType = isNonLocalReturn(descriptor) ?
+                              typeMapper.mapReturnType(getContainingFunctionNotLambda((FunctionDescriptor) descriptor)) : this.returnType;
             gen(returnedExpression, returnType);
             boolean hasFinallyBLocks = hasFinallyBLocks();
             if (hasFinallyBLocks) {
@@ -1590,6 +1594,10 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             v.visitInsn(RETURN);
         }
         return StackValue.none();
+    }
+
+    private boolean isNonLocalReturn(@NotNull CallableMemberDescriptor descriptor) {
+        return isLocalFunOrLambda(descriptor) && descriptor.getName().isSpecial();
     }
 
     public void returnExpression(JetExpression expr) {
@@ -3905,5 +3913,18 @@ The "returned" value of try expression with no finally is either the last expres
         NameGenerator nameGenerator = getParentCodegen().getInlineNameGenerator();
         Name name = context.getContextDescriptor().getName();
         return nameGenerator.subGenerator((name.isSpecial() ? "$special" : name.asString()) + "$$inlined" );
+    }
+
+    public FunctionDescriptor getContainingFunctionNotLambda(@NotNull FunctionDescriptor containingFunctionDescriptor) {
+        PsiElement containingFunction = BindingContextUtils.callableDescriptorToDeclaration(bindingContext, containingFunctionDescriptor);
+        assert containingFunction != null;
+        if (containingFunction instanceof JetFunctionLiteral) {
+            do {
+                containingFunctionDescriptor = DescriptorUtils.getParentOfType(containingFunctionDescriptor, FunctionDescriptor.class);
+                containingFunction = containingFunctionDescriptor != null ? BindingContextUtils
+                        .callableDescriptorToDeclaration(bindingContext, containingFunctionDescriptor) : null;
+            } while (containingFunction instanceof JetFunctionLiteral);
+        }
+        return containingFunctionDescriptor;
     }
 }
