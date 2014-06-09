@@ -43,6 +43,7 @@ import org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinder;
 import org.jetbrains.jet.lang.resolve.name.FqName;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.org.objectweb.asm.*;
+import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter;
 import org.jetbrains.org.objectweb.asm.tree.MethodNode;
 
 import java.io.IOException;
@@ -62,6 +63,8 @@ public class InlineCodegenUtil {
     public static final String THIS$0 = "this$0";
 
     public static final String RECEIVER$0 = "receiver$0";
+
+    public static final String GLOBAL_RETURN = "$GLOBAL_RETURN";
 
     @Nullable
     public static MethodNode getMethodNode(
@@ -272,4 +275,9 @@ public class InlineCodegenUtil {
     public static boolean isReturnOpcode(int opcode) {
         return opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN;
     }
+
+    public static void generateGlobalReturnFlag(InstructionAdapter iv) {
+        iv.visitMethodInsn(Opcodes.INVOKESTATIC, GLOBAL_RETURN, GLOBAL_RETURN, "()V", false);
+  }
+
 }
