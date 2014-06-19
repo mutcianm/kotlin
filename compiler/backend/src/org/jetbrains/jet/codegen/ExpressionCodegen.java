@@ -1578,13 +1578,13 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         JetExpression returnedExpression = expression.getReturnedExpression();
         if (returnedExpression != null) {
             CallableMemberDescriptor descriptor = getContext().getContextDescriptor();
-            boolean isNonLocalReturn = isNonLocalReturn(descriptor, expression);
+            Type nonLocalReturn = isNonLocalReturn(descriptor, expression);
+            boolean isNonLocalReturn = nonLocalReturn != null;
             if (isNonLocalReturn && !state.isInlineEnabled()) {
                 throw new CompilationException("Non local returns requires enabled inlining", null, returnedExpression);
             }
 
-            Type returnType = isNonLocalReturn ?
-                              typeMapper.mapReturnType(getContainingFunctionNotLambda((FunctionDescriptor) descriptor)) : this.returnType;
+            Type returnType = isNonLocalReturn ? nonLocalReturn : this.returnType;
             gen(returnedExpression, returnType);
             boolean hasFinallyBLocks = hasFinallyBLocks();
             if (hasFinallyBLocks) {
@@ -1607,20 +1607,21 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         return StackValue.none();
     }
 
-    private boolean isNonLocalReturn(@NotNull CallableMemberDescriptor descriptor, @NotNull JetReturnExpression expression) {
+    private Type isNonLocalReturn(@NotNull CallableMemberDescriptor descriptor, @NotNull JetReturnExpression expression) {
         //call inside lambda
         if (isLocalFunOrLambda(descriptor) && descriptor.getName().isSpecial()) {
             if (expression.getLabelName() == null) {
                 //non labeled return couldn't be local in lambda
-                return true;
+                return typeMapper.mapReturnType(getContainingFunctionNotLambda((FunctionDescriptor) descriptor));
             }
 
             PsiElement element = bindingContext.get(LABEL_TARGET, expression.getTargetLabel());
             if (element != callableDescriptorToDeclaration(bindingContext, context.getContextDescriptor())) {
-                return true;
+                DeclarationDescriptor descriptor1 = typeMapper.getBindingContext().get(DECLARATION_TO_DESCRIPTOR, element);
+                return typeMapper.mapReturnType((CallableDescriptor) descriptor1);
             }
         }
-        return false;
+        return null;
     }
 
     public void returnExpression(JetExpression expr) {

@@ -41,6 +41,7 @@ import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
 import org.jetbrains.jet.lang.types.lang.InlineStrategy;
 import org.jetbrains.jet.lang.types.lang.InlineUtil;
 import org.jetbrains.jet.renderer.DescriptorRenderer;
+import org.jetbrains.org.objectweb.asm.Label;
 import org.jetbrains.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.org.objectweb.asm.Opcodes;
 import org.jetbrains.org.objectweb.asm.Type;
@@ -221,7 +222,24 @@ public class InlineCodegen implements CallGenerator {
 
         LocalVarRemapper remapper = new LocalVarRemapper(parameters, initialFrameSize);
 
-        return inliner.doInline(codegen.v, remapper, true, LabelOwner.ACCEPT_ALL);
+
+        ReturnRemapper nonLocalReturnMapper = new ReturnRemapper(codegen.v, LabelOwner.ACCEPT_ALL, false) {
+            @Override
+            public Label getEndLabel() {
+                throw new RuntimeException();
+            }
+
+            @Override
+            public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                if (owner.equals(InlineCodegenUtil.GLOBAL_RETURN) &&
+                    (false == codegen.getContext().getContextDescriptor() instanceof AnonymousFunctionDescriptor)) {
+                    //root funtion descriptor (not a nesterd inlined lambda)
+                } else {
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf);
+                }
+            }
+        };
+        return inliner.doInline(codegen.getContext().getContextDescriptor() instanceof SimpleFunctionDescriptor ? nonLocalReturnMapper : codegen.v, remapper, true, LabelOwner.SKIP_ALL);
     }
 
     private void generateClosuresBodies() {
