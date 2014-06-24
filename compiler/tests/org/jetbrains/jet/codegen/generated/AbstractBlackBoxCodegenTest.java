@@ -17,12 +17,20 @@
 package org.jetbrains.jet.codegen.generated;
 
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.util.ArrayUtil;
 import com.intellij.util.Processor;
+import kotlin.KotlinPackage;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.jet.*;
+import org.jetbrains.jet.ConfigurationKind;
+import org.jetbrains.jet.JetTestUtils;
+import org.jetbrains.jet.TestJdkKind;
+import org.jetbrains.jet.cli.common.output.outputUtils.OutputUtilsPackage;
+import org.jetbrains.jet.cli.jvm.JVMConfigurationKeys;
 import org.jetbrains.jet.cli.jvm.compiler.JetCoreEnvironment;
 import org.jetbrains.jet.codegen.CodegenTestCase;
+import org.jetbrains.jet.codegen.GenerationUtils;
 import org.jetbrains.jet.codegen.InlineTestUtil;
+import org.jetbrains.jet.config.CompilerConfiguration;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.utils.UtilsPackage;
 
@@ -31,6 +39,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.jetbrains.jet.codegen.CodegenTestUtil.compileJava;
 import static org.jetbrains.jet.lang.resolve.java.PackageClassUtils.getPackageClassFqName;
@@ -43,6 +52,15 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
 
     public void doTestAgainstJava(@NotNull String filename) {
         blackBoxFileAgainstJavaByFullPath(filename);
+    }
+
+    public void doTestWithJava(@NotNull String filename) {
+        try {
+            blackBoxFileWithJavaByFullPath(filename);
+        }
+        catch (Exception e) {
+            throw UtilsPackage.rethrow(e);
+        }
     }
 
     public void doTestWithStdlib(@NotNull String filename) {
@@ -66,7 +84,7 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
 
         Collections.sort(files);
 
-        loadFiles(files.toArray(new String[files.size()]));
+        loadFiles(ArrayUtil.toStringArray(files));
         blackBox();
     }
 
@@ -83,6 +101,27 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
                 ConfigurationKind.ALL, TestJdkKind.MOCK_JDK, JetTestUtils.getAnnotationsJar(), javaClassesTempDirectory));
 
         loadFile(ktFile);
+        blackBox();
+    }
+
+    private void blackBoxFileWithJavaByFullPath(@NotNull String directory) throws Exception {
+        File javaFile = KotlinPackage.single(FileUtil.findFilesByMask(Pattern.compile(".*\\.java$"), new File(directory)));
+        File ktFile = KotlinPackage.single(FileUtil.findFilesByMask(Pattern.compile(".*\\.kt$"), new File(directory)));
+
+        CompilerConfiguration configuration = JetTestUtils.compilerConfigurationForTests(
+                ConfigurationKind.ALL, TestJdkKind.FULL_JDK, JetTestUtils.getAnnotationsJar()
+        );
+        configuration.add(JVMConfigurationKeys.CLASSPATH_KEY, javaFile.getParentFile());
+        myEnvironment = JetCoreEnvironment.createForTests(getTestRootDisposable(), configuration);
+        loadFileByFullPath(ktFile.getPath());
+        classFileFactory = GenerationUtils.compileFileGetClassFileFactoryForTest(myFiles.getPsiFile());
+        File kotlinOut = JetTestUtils.tmpDir(toString());
+        OutputUtilsPackage.writeAllTo(classFileFactory, kotlinOut);
+
+        File javaOut = compileJava(javaFile.getPath().substring("compiler/testData/codegen/".length()), kotlinOut.getPath());
+        // Add javac output to classpath so that the created class loader can find generated Java classes
+        configuration.add(JVMConfigurationKeys.CLASSPATH_KEY, javaOut);
+
         blackBox();
     }
 
