@@ -20,27 +20,27 @@ import java.lang.ref.WeakReference
 import kotlin.reflect.jvm.internal.pcollections.HashPMap
 
 // TODO: collect nulls periodically
-// Key of the map is Class.getName(), each value is either a WeakReference<KClassImpl<*>> or an Array<WeakReference<KClassImpl<*>>>.
+// Key of the map is Class.getName(), each value is either a WeakReference<KForeignClass<*>> or an Array<WeakReference<KForeignClass<*>>>.
 // Arrays are needed because the same class can be loaded by different class loaders, which result in different Class instances
 private var FOREIGN_K_CLASSES = HashPMap.empty<String, Any>()!!
 
 // This function is invoked on each reflection access to Java classes, properties, etc. It must be pretty fast.
-fun <T> foreignKotlinClass(jClass: Class<T>): KClassImpl<T> {
+fun <T> foreignKotlinClass(jClass: Class<T>): KForeignClass<T> {
     val name = jClass.getName()
     val cached = FOREIGN_K_CLASSES[name]
     if (cached is WeakReference<*>) {
-        val kClass = cached.get() as KClassImpl<*>
+        val kClass = cached.get() as KForeignClass<T>?
         if (kClass?.jClass == jClass) {
-            return kClass as KClassImpl<T>
+            return kClass!!
         }
     }
     else if (cached != null) {
         // If the cached value is not a reference, it's an array of references
-        cached as Array<WeakReference<KClassImpl<*>>>
+        cached as Array<WeakReference<KForeignClass<T>>>
         for (ref in cached) {
             val kClass = ref.get()
             if (kClass?.jClass == jClass) {
-                return kClass as KClassImpl<T>
+                return kClass!!
             }
         }
 
@@ -48,16 +48,16 @@ fun <T> foreignKotlinClass(jClass: Class<T>): KClassImpl<T> {
         // the single element would be cached instead), and none of those classes is the one we're looking for
         val size = cached.size
         // Don't use Array constructor because it creates a lambda
-        val newArray = arrayOfNulls<WeakReference<KClassImpl<*>>>(size + 1)
+        val newArray = arrayOfNulls<WeakReference<KForeignClass<*>>>(size + 1)
         // Don't use Arrays.copyOf because it works reflectively
         System.arraycopy(cached, 0, newArray, 0, size)
-        val newKClass = KClassImpl<T>(jClass)
+        val newKClass = KForeignClass<T>(jClass)
         newArray[size] = WeakReference(newKClass)
         FOREIGN_K_CLASSES = FOREIGN_K_CLASSES.plus(name, newArray)!!
         return newKClass
     }
 
-    val newKClass = KClassImpl<T>(jClass)
+    val newKClass = KForeignClass<T>(jClass)
     FOREIGN_K_CLASSES = FOREIGN_K_CLASSES.plus(name, WeakReference(newKClass))!!
     return newKClass
 }

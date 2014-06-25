@@ -474,7 +474,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
             return;
         }
 
-        generateReflectionObjectField(state, classAsmType, v, method("kClass", K_CLASS_IMPL_TYPE, getType(Class.class)),
+        generateReflectionObjectField(state, classAsmType, v, method("kKotlinClass", K_KOTLIN_CLASS_TYPE, getType(Class.class)),
                                       JvmAbi.KOTLIN_CLASS_FIELD_NAME, createOrGetClInitCodegen().v);
     }
 

@@ -16,23 +16,22 @@
 
 package kotlin.reflect.jvm.internal
 
-import kotlin.reflect.jvm.KOTLIN_CLASS_ANNOTATION_CLASS
+trait KClassImpl<out T> : KClass<T> {
+    val jClass: Class<T>
 
-enum class KClassOrigin {
-    BUILT_IN
-    KOTLIN
-    FOREIGN
+    fun memberProperty(name: String): KMemberProperty<T, Any?>
+
+    fun mutableMemberProperty(name: String): KMutableMemberProperty<T, Any?>
 }
 
-class KClassImpl<out T>(
-        val jClass: Class<T>
-) : KClass<T> {
-    val origin: KClassOrigin =
-            if (K_OBJECT_CLASS.isAssignableFrom(jClass) && jClass.isAnnotationPresent(KOTLIN_CLASS_ANNOTATION_CLASS)) {
-                KClassOrigin.KOTLIN
-            }
-            else {
-                KClassOrigin.FOREIGN
-                // TODO: built-in classes
-            }
+class KKotlinClass<out T>(override val jClass: Class<T>) : KClassImpl<T> {
+    override fun memberProperty(name: String) = KMemberPropertyImpl<T, Any?>(name, this)
+
+    override fun mutableMemberProperty(name: String) = KMutableMemberPropertyImpl<T, Any?>(name, this)
+}
+
+class KForeignClass<out T>(override val jClass: Class<T>) : KClassImpl<T> {
+    override fun memberProperty(name: String) = KForeignMemberProperty<T, Any?>(name, this)
+
+    override fun mutableMemberProperty(name: String) = KMutableForeignMemberProperty<T, Any?>(name, this)
 }

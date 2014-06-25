@@ -17,8 +17,11 @@
 package kotlin.reflect.jvm.internal
 
 
-fun <T> kClass(jClass: Class<T>): KClassImpl<T> =
-        KClassImpl<T>(jClass)
+fun <T> kKotlinClass(jClass: Class<T>): KKotlinClass<T> =
+        KKotlinClass<T>(jClass)
+
+fun <T> kForeignClass(jClass: Class<T>): KForeignClass<T> =
+        KForeignClass<T>(jClass)
 
 fun kPackage(jClass: Class<*>): KPackageImpl =
         KPackageImpl(jClass)
@@ -34,10 +37,3 @@ fun <T> extensionProperty(name: String, owner: KPackageImpl, receiver: Class<T>)
 
 fun <T> mutableExtensionProperty(name: String, owner: KPackageImpl, receiver: Class<T>): KMutableExtensionPropertyImpl<T, Any?> =
         KMutableExtensionPropertyImpl<T, Any?>(name, owner, receiver)
-
-fun <T : Any> memberProperty(name: String, owner: KClassImpl<T>): KMemberPropertyImpl<T, Any?> =
-        KMemberPropertyImpl<T, Any?>(name, owner)
-
-fun <T : Any> mutableMemberProperty(name: String, owner: KClassImpl<T>): KMutableMemberPropertyImpl<T, Any?> =
-        KMutableMemberPropertyImpl<T, Any?>(name, owner)
-

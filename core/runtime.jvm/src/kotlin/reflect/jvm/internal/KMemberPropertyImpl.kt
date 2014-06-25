@@ -18,47 +18,61 @@ package kotlin.reflect.jvm.internal
 
 import java.lang.reflect.*
 
+// TODO: properties of built-in classes
+
 open class KMemberPropertyImpl<T : Any, out R>(
         public override val name: String,
-        protected val owner: KClassImpl<T>
+        protected val owner: KKotlinClass<T>
 ) : KMemberProperty<T, R>, KPropertyImpl<R> {
-    override val field: Field? =
-            if (owner.origin == KClassOrigin.FOREIGN) {
-                owner.jClass.getField(name)
-            }
-            else null
+    override val field: Field?
+        get() = try {
+            owner.jClass.getDeclaredField(name)
+        }
+        catch (e: NoSuchFieldException) {
+            null
+        }
 
     // TODO: extract, make lazy (weak?), use our descriptors knowledge
-    override val getter: Method? =
-            if (owner.origin == KClassOrigin.KOTLIN) {
-                owner.jClass.getMaybeDeclaredMethod(getterName(name))
-            }
-            else null
+    override val getter: Method = owner.jClass.getMaybeDeclaredMethod(getterName(name))
 
-    // TODO: built-in classes
     override fun get(receiver: T): R {
-        if (getter != null) {
-            return getter!!(receiver) as R
-        }
-        return field!!.get(receiver) as R
+        return getter(receiver) as R
     }
 }
 
 class KMutableMemberPropertyImpl<T : Any, R>(
         name: String,
-        owner: KClassImpl<T>
+        owner: KKotlinClass<T>
 ) : KMutableMemberProperty<T, R>, KMutablePropertyImpl<R>, KMemberPropertyImpl<T, R>(name, owner) {
-    override val setter: Method? =
-            if (owner.origin == KClassOrigin.KOTLIN) {
-                owner.jClass.getMaybeDeclaredMethod(setterName(name), getter!!.getReturnType()!!)
-            }
-            else null
+    override val setter: Method = owner.jClass.getMaybeDeclaredMethod(setterName(name), getter.getReturnType()!!)
 
     override fun set(receiver: T, value: R) {
-        if (setter != null) {
-            setter!!(receiver, value)
-            return
-        }
-        field!!.set(receiver, value)
+        setter(receiver, value)
+    }
+}
+
+
+
+open class KForeignMemberProperty<T : Any, out R>(
+        public override val name: String,
+        protected val owner: KForeignClass<T>
+) : KMemberProperty<T, R>, KPropertyImpl<R> {
+    override val field: Field = owner.jClass.getField(name)
+
+    override val getter: Method? = null
+
+    override fun get(receiver: T): R {
+        return field.get(receiver) as R
+    }
+}
+
+class KMutableForeignMemberProperty<T : Any, out R>(
+        name: String,
+        owner: KForeignClass<T>
+) : KMutableMemberProperty<T, R>, KMutablePropertyImpl<R>, KForeignMemberProperty<T, R>(name, owner) {
+    override val setter: Method? = null
+
+    override fun set(receiver: T, value: R) {
+        field.set(receiver, value)
     }
 }
