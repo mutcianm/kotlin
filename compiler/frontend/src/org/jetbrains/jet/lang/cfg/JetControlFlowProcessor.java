@@ -1348,15 +1348,28 @@ public class JetControlFlowProcessor {
 
         @Override
         public void visitDelegationToSuperCallSpecifier(@NotNull JetDelegatorToSuperCall call) {
-            List<? extends ValueArgument> valueArguments = call.getValueArguments();
-            for (ValueArgument valueArgument : valueArguments) {
-                generateInstructions(valueArgument.getArgumentExpression());
+            if (!generateCall(call.getCalleeExpression())) {
+                List<JetExpression> arguments = KotlinPackage.map(
+                        call.getValueArguments(),
+                        new Function1<ValueArgument, JetExpression>() {
+                            @Override
+                            public JetExpression invoke(ValueArgument valueArgument) {
+                                return valueArgument.getArgumentExpression();
+                            }
+                        }
+                );
+
+                for (JetExpression argument : arguments) {
+                    generateInstructions(argument);
+                }
+                createNonSyntheticValue(call, arguments);
             }
         }
 
         @Override
         public void visitDelegationByExpressionSpecifier(@NotNull JetDelegatorByExpressionSpecifier specifier) {
             generateInstructions(specifier.getDelegateExpression());
+            createSyntheticValue(specifier, specifier.getDelegateExpression());
         }
 
         @Override
@@ -1403,7 +1416,6 @@ public class JetControlFlowProcessor {
             }
 
             JetElement callElement = resolvedCall.getCall().getCallElement();
-            JetExpression callExpression = callElement instanceof JetExpression ? (JetExpression) callElement : null;
 
             CallableDescriptor resultingDescriptor = resolvedCall.getResultingDescriptor();
             Map<PseudoValue, ReceiverValue> receivers = getReceiverValues(resolvedCall, true);
@@ -1416,14 +1428,14 @@ public class JetControlFlowProcessor {
             }
 
             if (resultingDescriptor instanceof VariableDescriptor) {
-                assert callExpression != null
+                assert callElement instanceof JetExpression
                         : "Variable-based call without call expression: " + callElement.getText();
                 assert parameterValues.isEmpty()
                         : "Variable-based call with non-empty argument list: " + callElement.getText();
-                return builder.readVariable(calleeExpression, callExpression, resolvedCall, receivers);
+                return builder.readVariable(calleeExpression, (JetExpression) callElement, resolvedCall, receivers);
             }
             mark(resolvedCall.getCall().getCallElement());
-            return builder.call(calleeExpression, callExpression, resolvedCall, receivers, parameterValues);
+            return builder.call(calleeExpression, callElement, resolvedCall, receivers, parameterValues);
         }
 
         @NotNull

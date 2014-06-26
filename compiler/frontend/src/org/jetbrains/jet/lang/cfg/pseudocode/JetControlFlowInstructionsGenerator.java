@@ -462,7 +462,7 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         @Override
         public CallInstruction call(
                 @NotNull JetElement instructionElement,
-                @Nullable JetExpression valueElement,
+                @Nullable JetElement valueElement,
                 @NotNull ResolvedCall<?> resolvedCall,
                 @NotNull Map<PseudoValue, ReceiverValue> receiverValues,
                 @NotNull Map<PseudoValue, ValueParameterDescriptor> arguments
