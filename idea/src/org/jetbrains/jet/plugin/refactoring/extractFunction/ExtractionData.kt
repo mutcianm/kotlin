@@ -46,11 +46,11 @@ import org.jetbrains.jet.lang.psi.JetDeclaration
 import org.jetbrains.jet.lang.psi.JetDeclarationWithBody
 import org.jetbrains.jet.lang.psi.JetUserType
 import org.jetbrains.jet.lang.resolve.calls.model.VariableAsFunctionResolvedCall
-import org.jetbrains.jet.lang.psi.JetParameter
 import org.jetbrains.jet.lang.descriptors.ValueParameterDescriptor
 import org.jetbrains.jet.lang.psi.JetPsiFactory
 import org.jetbrains.jet.lang.resolve.BindingContextUtils
 import org.jetbrains.jet.lang.psi.JetFunctionLiteral
+import org.jetbrains.jet.lang.psi.JetClassInitializer
 
 data class ExtractionOptions(val inferUnitTypeForUnusedValues: Boolean) {
     class object {
@@ -79,7 +79,9 @@ class ExtractionData(
 ) {
     val project: Project = originalFile.getProject()
 
-    val insertBefore: Boolean = targetSibling.getParentByType(javaClass<JetDeclaration>(), true) is JetDeclarationWithBody
+    val insertBefore: Boolean = targetSibling.getParentByType(javaClass<JetDeclaration>(), true)?.let {
+        it is JetDeclarationWithBody || it is JetClassInitializer
+    } ?: false
 
     fun getExpressions(): List<JetExpression> = originalElements.filterIsInstance(javaClass<JetExpression>())
 
