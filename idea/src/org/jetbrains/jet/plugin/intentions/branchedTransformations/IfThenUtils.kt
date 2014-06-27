@@ -42,6 +42,9 @@ import org.jetbrains.jet.lang.psi.JetPostfixExpression
 import org.jetbrains.jet.lang.psi.JetCallExpression
 import org.jetbrains.jet.lang.resolve.DescriptorUtils
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.isStatement
+import org.jetbrains.jet.lang.resolve.DelegatingBindingTrace
+import org.jetbrains.jet.lang.cfg.JetControlFlowProcessor
+import org.jetbrains.jet.lang.psi.psiUtil.getParentByType
 
 val NULL_PTR_EXCEPTION = "NullPointerException"
 val NULL_PTR_EXCEPTION_FQ = "java.lang.NullPointerException"
@@ -71,7 +74,11 @@ fun JetExpression.extractExpressionIfSingle(): JetExpression? {
     return innerExpression
 }
 
-fun JetExpression.isStatement(): Boolean = isStatement(AnalyzerFacadeWithCache.getContextForElement(this))
+fun JetExpression.isStatement(): Boolean {
+    val trace = DelegatingBindingTrace(AnalyzerFacadeWithCache.getContextForElement(this), "")
+    this.getParentByType(javaClass<JetDeclaration>())?.let {JetControlFlowProcessor(trace).generatePseudocode(it) }
+    return isStatement(trace.getBindingContext())
+}
 
 fun JetBinaryExpression.getNonNullExpression(): JetExpression? = when {
     this.getLeft()?.isNullExpression() == false ->

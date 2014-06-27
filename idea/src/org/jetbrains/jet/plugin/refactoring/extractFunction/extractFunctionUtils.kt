@@ -44,7 +44,6 @@ import org.jetbrains.jet.lang.descriptors.impl.LocalVariableDescriptor
 import org.jetbrains.jet.utils.DFS
 import org.jetbrains.jet.utils.DFS.*
 import org.jetbrains.jet.lang.resolve.BindingContextUtils
-import org.jetbrains.jet.plugin.caches.resolve.getLazyResolveSession
 import org.jetbrains.jet.lang.psi.psiUtil.prependElement
 import org.jetbrains.jet.lang.psi.psiUtil.appendElement
 import org.jetbrains.jet.plugin.codeInsight.ShortenReferences
@@ -66,6 +65,9 @@ import org.jetbrains.jet.lang.resolve.bindingContextUtil.getTargetFunctionDescri
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.jet.lang.resolve.OverridingUtil
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.isStatement
+import org.jetbrains.jet.lang.resolve.DelegatingBindingTrace
+import org.jetbrains.jet.plugin.caches.resolve.getLazyResolveSession
+import org.jetbrains.jet.lang.cfg.JetControlFlowProcessor
 import org.jetbrains.jet.lang.psi.psiUtil.isAncestor
 
 private val DEFAULT_FUNCTION_NAME = "myFun"
@@ -565,13 +567,14 @@ fun ExtractionData.performAnalysis(): AnalysisResult {
         }
         else -> return noContainerError
     }
-    val bindingContext = originalFile.getLazyResolveSession().resolveToElement(bodyElement)
+    val trace = DelegatingBindingTrace(originalFile.getLazyResolveSession().resolveToElement(bodyElement), "Extract function")
+    val bindingContext = trace.getBindingContext()
 
     val pseudocodeDeclaration = PsiTreeUtil.getParentOfType(
             commonParent, javaClass<JetDeclarationWithBody>(), javaClass<JetClassOrObject>()
     ) ?: commonParent.getParentByType(javaClass<JetProperty>())
     ?: return noContainerError
-    val pseudocode = PseudocodeUtil.generatePseudocode(pseudocodeDeclaration, bindingContext)
+    val pseudocode = JetControlFlowProcessor(trace).generatePseudocode(pseudocodeDeclaration)
     val localInstructions = getLocalInstructions(pseudocode)
 
     val replacementMap = HashMap<Int, Replacement>()
