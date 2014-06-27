@@ -65,6 +65,7 @@ import org.jetbrains.jet.lang.cfg.pseudocodeTraverser.TraversalOrder
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.getTargetFunctionDescriptor
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.jet.lang.resolve.OverridingUtil
+import org.jetbrains.jet.lang.psi.psiUtil.isAncestor
 
 private val DEFAULT_FUNCTION_NAME = "myFun"
 private val DEFAULT_RETURN_TYPE = KotlinBuiltIns.getInstance().getUnitType()
@@ -543,7 +544,7 @@ fun ExtractionData.performAnalysis(): AnalysisResult {
 
     val noContainerError = AnalysisResult(null, Status.CRITICAL_ERROR, listOf(ErrorMessage.NO_CONTAINER))
 
-    val commonParent = PsiTreeUtil.findCommonParent(originalElements)!!
+    val commonParent = PsiTreeUtil.findCommonParent(originalElements) as JetElement
 
     val enclosingDeclaration = commonParent.getParentByType(javaClass<JetDeclaration>(), true)
     val bodyElement = when (enclosingDeclaration) {
@@ -552,7 +553,8 @@ fun ExtractionData.performAnalysis(): AnalysisResult {
         is JetParameter -> enclosingDeclaration.getDefaultValue()
         is JetClassInitializer -> enclosingDeclaration.getBody()
         is JetClass -> {
-            if (commonParent.isInsideOf(enclosingDeclaration.getDelegationSpecifiers())) enclosingDeclaration else return noContainerError
+            val delegationSpecifierList = enclosingDeclaration.getDelegationSpecifierList()
+            if (delegationSpecifierList.isAncestor(commonParent)) commonParent else return noContainerError
         }
         else -> return noContainerError
     }

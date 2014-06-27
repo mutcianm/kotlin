@@ -211,7 +211,7 @@ public class JetExtractionTestGenerated extends AbstractJetExtractionTest {
     }
     
     @TestMetadata("idea/testData/refactoring/extractFunction")
-    @InnerTestClasses({ExtractFunction.Basic.class, ExtractFunction.ControlFlow.class, ExtractFunction.DefaultContainer.class, ExtractFunction.Initializers.class, ExtractFunction.Parameters.class, ExtractFunction.TypeParameters.class})
+    @InnerTestClasses({ExtractFunction.Basic.class, ExtractFunction.ControlFlow.class, ExtractFunction.DefaultContainer.class, ExtractFunction.Delegation.class, ExtractFunction.Initializers.class, ExtractFunction.Parameters.class, ExtractFunction.TypeParameters.class})
     public static class ExtractFunction extends AbstractJetExtractionTest {
         public void testAllFilesPresentInExtractFunction() throws Exception {
             JetTestUtils.assertAllTestsPresentByMetadata(this.getClass(), "org.jetbrains.jet.generators.tests.TestsPackage", new File("idea/testData/refactoring/extractFunction"), Pattern.compile("^(.+)\\.kt$"), true);
@@ -685,6 +685,24 @@ public class JetExtractionTestGenerated extends AbstractJetExtractionTest {
             
         }
         
+        @TestMetadata("idea/testData/refactoring/extractFunction/delegation")
+        public static class Delegation extends AbstractJetExtractionTest {
+            public void testAllFilesPresentInDelegation() throws Exception {
+                JetTestUtils.assertAllTestsPresentByMetadata(this.getClass(), "org.jetbrains.jet.generators.tests.TestsPackage", new File("idea/testData/refactoring/extractFunction/delegation"), Pattern.compile("^(.+)\\.kt$"), true);
+            }
+            
+            @TestMetadata("delegationByExpression.kt")
+            public void testDelegationByExpression() throws Exception {
+                doExtractFunctionTest("idea/testData/refactoring/extractFunction/delegation/delegationByExpression.kt");
+            }
+            
+            @TestMetadata("delegationBySuperCall.kt")
+            public void testDelegationBySuperCall() throws Exception {
+                doExtractFunctionTest("idea/testData/refactoring/extractFunction/delegation/delegationBySuperCall.kt");
+            }
+            
+        }
+        
         @TestMetadata("idea/testData/refactoring/extractFunction/initializers")
         @InnerTestClasses({Initializers.Accessors.class, Initializers.Classes.class, Initializers.Functions.class, Initializers.Properties.class})
         public static class Initializers extends AbstractJetExtractionTest {
@@ -1137,6 +1155,7 @@ public class JetExtractionTestGenerated extends AbstractJetExtractionTest {
             suite.addTestSuite(Basic.class);
             suite.addTest(ControlFlow.innerSuite());
             suite.addTestSuite(DefaultContainer.class);
+            suite.addTestSuite(Delegation.class);
             suite.addTest(Initializers.innerSuite());
             suite.addTest(Parameters.innerSuite());
             suite.addTestSuite(TypeParameters.class);
