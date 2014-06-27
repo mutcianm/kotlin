@@ -45,11 +45,10 @@ public class JavaClassArray extends IntrinsicMethod {
             @Nullable List<JetExpression> arguments,
             StackValue receiver
     ) {
-        ResolvedCall<?> call =
-                codegen.getBindingContext().get(BindingContext.RESOLVED_CALL, ((JetCallExpression) element).getCalleeExpression());
-        assert call != null;
-        Map.Entry<ValueParameterDescriptor, ResolvedValueArgument> next = call.getValueArguments().entrySet().iterator().next();
-        codegen.genVarargs(next.getKey(), (VarargValueArgument) next.getValue());
+        assert element != null : "Element should not be null";
+        ResolvedCall<?> resolvedCall = codegen.resolvedCall(((JetCallExpression) element).getCalleeExpression());
+        Map.Entry<ValueParameterDescriptor, ResolvedValueArgument> argument = resolvedCall.getValueArguments().entrySet().iterator().next();
+        codegen.genVarargs((VarargValueArgument) argument.getValue(), argument.getKey().getType());
         return returnType;
     }
 }
