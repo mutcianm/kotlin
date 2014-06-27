@@ -58,4 +58,7 @@ public interface Pseudocode {
 
     @Nullable
     PseudoValue getElementValue(@Nullable JetElement element);
+
+    @NotNull
+    List<? extends Instruction> getDependentInstructions(@Nullable PseudoValue value);
 }
