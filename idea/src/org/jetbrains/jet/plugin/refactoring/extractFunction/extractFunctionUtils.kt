@@ -65,6 +65,7 @@ import org.jetbrains.jet.lang.cfg.pseudocodeTraverser.TraversalOrder
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.getTargetFunctionDescriptor
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.jet.lang.resolve.OverridingUtil
+import org.jetbrains.jet.lang.resolve.bindingContextUtil.isStatement
 import org.jetbrains.jet.lang.psi.psiUtil.isAncestor
 
 private val DEFAULT_FUNCTION_NAME = "myFun"
@@ -83,7 +84,6 @@ private fun List<Instruction>.getExitPoints(): List<Instruction> =
         filter { localInstruction -> localInstruction.nextInstructions.any { it !in this } }
 
 private fun List<Instruction>.getResultType(
-        pseudocode: Pseudocode,
         bindingContext: BindingContext,
         options: ExtractionOptions): JetType {
     fun instructionToType(instruction: Instruction): JetType? {
@@ -98,7 +98,7 @@ private fun List<Instruction>.getResultType(
         }
 
         if (expression == null) return null
-        if (options.inferUnitTypeForUnusedValues && expression.isStatement(pseudocode)) return null
+        if (options.inferUnitTypeForUnusedValues && expression.isStatement(bindingContext)) return null
 
         return bindingContext[BindingContext.EXPRESSION_TYPE, expression]
     }
@@ -174,8 +174,8 @@ private fun List<Instruction>.analyzeControlFlow(
         }
     }
 
-    val typeOfDefaultFlow = defaultExits.getResultType(pseudocode, bindingContext, options)
-    val returnValueType = valuedReturnExits.getResultType(pseudocode, bindingContext, options)
+    val typeOfDefaultFlow = defaultExits.getResultType(bindingContext, options)
+    val returnValueType = valuedReturnExits.getResultType(bindingContext, options)
     val defaultControlFlow = DefaultControlFlow(if (returnValueType.isMeaningful()) returnValueType else typeOfDefaultFlow)
 
     val outParameters = parameters.filterTo(HashSet<Parameter>()) { it.mirrorVarName != null }
@@ -217,7 +217,7 @@ private fun List<Instruction>.analyzeControlFlow(
         }
 
         if (!valuedReturnExits.checkEquivalence(false)) return multipleExitsError
-        return Pair(ExpressionEvaluationWithCallSiteReturn(valuedReturnExits.getResultType(pseudocode, bindingContext, options)), null)
+        return Pair(ExpressionEvaluationWithCallSiteReturn(valuedReturnExits.getResultType(bindingContext, options)), null)
     }
 
     if (jumpExits.isNotEmpty()) {

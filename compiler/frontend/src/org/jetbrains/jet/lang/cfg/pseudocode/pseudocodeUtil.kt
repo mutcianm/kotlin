@@ -32,9 +32,6 @@ import org.jetbrains.jet.lang.resolve.OverridingUtil
 import org.jetbrains.jet.lang.types.TypeUtils
 import org.jetbrains.jet.lang.types.JetType
 
-fun JetExpression.isStatement(pseudocode: Pseudocode): Boolean =
-        pseudocode.getDependentInstructions(pseudocode.getElementValue(this)).isEmpty()
-
 fun getReceiverTypePredicate(resolvedCall: ResolvedCall<*>, receiverValue: ReceiverValue): TypePredicate? {
     val callableDescriptor = resolvedCall.getResultingDescriptor()
     if (callableDescriptor == null) return null

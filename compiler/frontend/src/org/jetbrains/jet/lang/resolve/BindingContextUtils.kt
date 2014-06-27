@@ -68,3 +68,5 @@ public fun JetReturnExpression.getTargetFunctionDescriptor(bindingContext: Bindi
             .dropWhile { it is AnonymousFunctionDescriptor }
             .firstOrNull()
 }
+
+public fun JetExpression.isStatement(context: BindingContext): Boolean = !(context[BindingContext.USED_AS_EXPRESSION, this] ?: false)

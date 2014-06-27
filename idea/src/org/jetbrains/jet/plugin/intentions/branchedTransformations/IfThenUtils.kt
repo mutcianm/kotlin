@@ -28,7 +28,6 @@ import org.jetbrains.jet.plugin.refactoring.introduce.introduceVariable.KotlinIn
 import org.jetbrains.jet.lang.psi.JetSafeQualifiedExpression
 import org.jetbrains.jet.lang.resolve.BindingContext
 import org.jetbrains.jet.plugin.project.AnalyzerFacadeWithCache
-import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns
 import com.intellij.psi.PsiElement
 import org.jetbrains.jet.plugin.refactoring.inline.KotlinInlineValHandler
 import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
@@ -42,6 +41,7 @@ import org.jetbrains.jet.lang.psi.JetThrowExpression
 import org.jetbrains.jet.lang.psi.JetPostfixExpression
 import org.jetbrains.jet.lang.psi.JetCallExpression
 import org.jetbrains.jet.lang.resolve.DescriptorUtils
+import org.jetbrains.jet.lang.resolve.bindingContextUtil.isStatement
 
 val NULL_PTR_EXCEPTION = "NullPointerException"
 val NULL_PTR_EXCEPTION_FQ = "java.lang.NullPointerException"
@@ -71,17 +71,7 @@ fun JetExpression.extractExpressionIfSingle(): JetExpression? {
     return innerExpression
 }
 
-fun JetExpression.isStatement(): Boolean {
-    val context = AnalyzerFacadeWithCache.getContextForElement(this)
-
-    val expectedType = context.get(BindingContext.EXPECTED_EXPRESSION_TYPE, this);
-    val isUnit = expectedType != null && KotlinBuiltIns.getInstance().isUnit(expectedType);
-
-    // Some "statements" are actually expressions returned from lambdas, their expected types are non-null
-    val isStatement = context.get(BindingContext.STATEMENT, this) == true && expectedType == null;
-
-    return isStatement || isUnit
-}
+fun JetExpression.isStatement(): Boolean = isStatement(AnalyzerFacadeWithCache.getContextForElement(this))
 
 fun JetBinaryExpression.getNonNullExpression(): JetExpression? = when {
     this.getLeft()?.isNullExpression() == false ->

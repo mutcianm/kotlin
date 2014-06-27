@@ -27,8 +27,10 @@ import kotlin.KotlinPackage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.cfg.pseudocode.*;
+import org.jetbrains.jet.lang.cfg.pseudocode.instructions.Instruction;
 import org.jetbrains.jet.lang.cfg.pseudocode.instructions.eval.AccessTarget;
 import org.jetbrains.jet.lang.cfg.pseudocode.instructions.eval.InstructionWithValue;
+import org.jetbrains.jet.lang.cfg.pseudocodeTraverser.PseudocodeTraverserPackage;
 import org.jetbrains.jet.lang.descriptors.*;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.psi.psiUtil.PsiUtilPackage;
@@ -52,7 +54,9 @@ import org.jetbrains.jet.lexer.JetTokens;
 import java.util.*;
 
 import static org.jetbrains.jet.lang.cfg.JetControlFlowBuilder.PredefinedOperation.*;
+import static org.jetbrains.jet.lang.cfg.pseudocodeTraverser.TraversalOrder.FORWARD;
 import static org.jetbrains.jet.lang.diagnostics.Errors.*;
+import static org.jetbrains.jet.lang.resolve.BindingContext.USED_AS_EXPRESSION;
 import static org.jetbrains.jet.lexer.JetTokens.*;
 
 public class JetControlFlowProcessor {
@@ -69,6 +73,7 @@ public class JetControlFlowProcessor {
     public Pseudocode generatePseudocode(@NotNull JetElement subroutine) {
         Pseudocode pseudocode = generate(subroutine);
         ((PseudocodeImpl) pseudocode).postProcess();
+        computeStatements(pseudocode);
         return pseudocode;
     }
 
@@ -114,6 +119,31 @@ public class JetControlFlowProcessor {
         builder.nondeterministicJump(afterDeclaration, parent, null);
         generate(subroutine);
         builder.bindLabel(afterDeclaration);
+    }
+
+    private void computeStatements(@NotNull Pseudocode pseudocode) {
+        PseudocodeTraverserPackage.traverse(
+                pseudocode, FORWARD, new JetFlowInformationProvider.FunctionVoid1<Instruction>() {
+                    @Override
+                    public void execute(@NotNull Instruction instruction) {
+                        PseudoValue value = instruction instanceof InstructionWithValue
+                                            ? ((InstructionWithValue) instruction).getOutputValue()
+                                            : null;
+                        Pseudocode pseudocode = instruction.getOwner();
+                        boolean isUsedAsExpression = !pseudocode.getDependentInstructions(value).isEmpty();
+                        for (JetElement element : pseudocode.getValueElements(value)) {
+                            trace.record(USED_AS_EXPRESSION, element, isUsedAsExpression);
+
+                            if (element instanceof JetWhenExpression) {
+                                JetWhenExpression whenExpression = (JetWhenExpression) element;
+                                if (whenExpression.getElseExpression() == null && WhenChecker.mustHaveElse(whenExpression, trace)) {
+                                    trace.report(NO_ELSE_IN_WHEN.on(whenExpression));
+                                }
+                            }
+                        }
+                    }
+                }
+        );
     }
 
     private class CFPVisitor extends JetVisitorVoid {
@@ -1239,8 +1269,6 @@ public class JetControlFlowProcessor {
                 generateInstructions(subjectExpression);
             }
 
-            boolean hasElse = false;
-
             List<JetExpression> branches = new ArrayList<JetExpression>();
 
             Label doneLabel = builder.createUnboundLabel();
@@ -1252,7 +1280,6 @@ public class JetControlFlowProcessor {
 
                 boolean isElse = whenEntry.isElse();
                 if (isElse) {
-                    hasElse = true;
                     if (iterator.hasNext()) {
                         trace.report(ELSE_MISPLACED_IN_WHEN.on(whenEntry));
                     }
@@ -1292,9 +1319,6 @@ public class JetControlFlowProcessor {
                 }
             }
             builder.bindLabel(doneLabel);
-            if (!hasElse && WhenChecker.mustHaveElse(expression, trace)) {
-                trace.report(NO_ELSE_IN_WHEN.on(expression));
-            }
 
             mergeValues(branches, expression);
         }

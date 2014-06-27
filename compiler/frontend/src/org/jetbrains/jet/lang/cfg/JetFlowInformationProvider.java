@@ -29,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.cfg.PseudocodeVariablesData.VariableInitState;
 import org.jetbrains.jet.lang.cfg.PseudocodeVariablesData.VariableUseState;
+import org.jetbrains.jet.lang.cfg.pseudocode.PseudoValue;
 import org.jetbrains.jet.lang.cfg.pseudocode.Pseudocode;
 import org.jetbrains.jet.lang.cfg.pseudocode.PseudocodeUtil;
 import org.jetbrains.jet.lang.cfg.pseudocode.instructions.Instruction;
@@ -122,6 +123,8 @@ public class JetFlowInformationProvider {
         markUnusedVariables();
 
         markUnusedLiteralsInBlock();
+
+        markStatements();
     }
 
     public void checkFunction(@Nullable JetType expectedReturnType) {
@@ -690,6 +693,37 @@ public class JetFlowInformationProvider {
                                 }
                                 else {
                                     report(Errors.UNUSED_EXPRESSION.on(element), ctxt);
+                                }
+                            }
+                        }
+                    }
+                }
+        );
+    }
+
+////////////////////////////////////////////////////////////////////////////////
+// Statements
+
+    public void markStatements() {
+        PseudocodeTraverserPackage.traverse(
+                pseudocode, FORWARD, new FunctionVoid1<Instruction>() {
+                    @Override
+                    public void execute(@NotNull Instruction instruction) {
+                        PseudoValue value = instruction instanceof InstructionWithValue
+                                            ? ((InstructionWithValue) instruction).getOutputValue()
+                                            : null;
+                        if (value == null) return;
+
+                        Pseudocode pseudocode = instruction.getOwner();
+
+                        boolean isStatement = pseudocode.getDependentInstructions(value).isEmpty();
+                        for (JetElement element : pseudocode.getValueElements(value)) {
+                            trace.record(STATEMENT, element, isStatement);
+
+                            if (element instanceof JetWhenExpression) {
+                                JetWhenExpression whenExpression = (JetWhenExpression) element;
+                                if (whenExpression.getElseExpression() == null && WhenChecker.mustHaveElse(whenExpression, trace)) {
+                                    trace.report(NO_ELSE_IN_WHEN.on(whenExpression));
                                 }
                             }
                         }
