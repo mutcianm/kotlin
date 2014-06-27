@@ -798,23 +798,28 @@ public class JetTypeMapper {
             }
         }
 
+        // There are no assertions in the following code, because it's frequently executed in light classes, where code may be erroneous
         JetDelegatorToSuperCall superCall = closure.getSuperCall();
         if (superCall != null) {
             ResolvedCall<?> resolvedCall = bindingContext.get(BindingContext.RESOLVED_CALL, superCall.getCalleeExpression());
-            assert resolvedCall != null : "Unresolved super call: " + superCall.getText();
-            CallableDescriptor superDescriptor = resolvedCall.getResultingDescriptor();
-            if (superDescriptor instanceof ConstructorDescriptor && isAnonymousObject(descriptor.getContainingDeclaration())) {
-                List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
-                assert valueArguments != null : "Failed to arrange value arguments by index: " + descriptor;
-                List<JvmMethodParameterSignature> parameters = mapSignature((FunctionDescriptor) superDescriptor).getValueParameters();
-                assert valueArguments.size() == parameters.size() : "Parameters != arguments for super call: " + superCall.getText();
-                for (int i = 0; i < parameters.size(); i++) {
-                    ResolvedValueArgument valueArgument = valueArguments.get(i);
-                    if (!(valueArgument instanceof DefaultValueArgument)) {
-                        JvmMethodParameterSignature parameter = parameters.get(i);
-                        signatureWriter.writeParameterType(JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM);
-                        signatureWriter.writeAsmType(parameter.getAsmType());
-                        signatureWriter.writeParameterTypeEnd();
+            if (resolvedCall != null) {
+                CallableDescriptor superDescriptor = resolvedCall.getResultingDescriptor();
+                if (superDescriptor instanceof ConstructorDescriptor && isAnonymousObject(descriptor.getContainingDeclaration())) {
+                    List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
+                    if (valueArguments != null) {
+                        List<JvmMethodParameterSignature> parameters =
+                                mapSignature((FunctionDescriptor) superDescriptor).getValueParameters();
+                        if (valueArguments.size() == parameters.size()) {
+                            for (int i = 0; i < parameters.size(); i++) {
+                                ResolvedValueArgument valueArgument = valueArguments.get(i);
+                                if (!(valueArgument instanceof DefaultValueArgument)) {
+                                    JvmMethodParameterSignature parameter = parameters.get(i);
+                                    signatureWriter.writeParameterType(JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM);
+                                    signatureWriter.writeAsmType(parameter.getAsmType());
+                                    signatureWriter.writeParameterTypeEnd();
+                                }
+                            }
+                        }
                     }
                 }
             }

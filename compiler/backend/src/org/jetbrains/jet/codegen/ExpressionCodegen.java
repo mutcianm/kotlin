@@ -1353,9 +1353,13 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
                     valueParameters.add(superValueParameters.get(i));
                 }
             }
+
             // Captured this and variables are irrelevant at this point, because we pushed them on the stack earlier
-            pushMethodArgumentsWithoutCallReceiver(valueParameters, valueArguments, filterAnonymousObjectSuperCallParameters(constructor),
-                                                   defaultCallGenerator, false);
+            ArgumentGenerator argumentGenerator =
+                    new CallBasedArgumentGenerator(this, defaultCallGenerator, valueParameters,
+                                                          filterAnonymousObjectSuperCallParameters(constructor));
+
+            pushMethodArgumentsWithoutCallReceiver(valueArguments, false, argumentGenerator);
         }
 
         v.invokespecial(type.getInternalName(), "<init>", constructor.getAsmMethod().getDescriptor());
@@ -2295,7 +2299,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         return false;
     }
 
-    public int pushMethodArgumentsWithCallReceiver(
+    private int pushMethodArgumentsWithCallReceiver(
             @Nullable StackValue receiver,
             @NotNull ResolvedCall<?> resolvedCall,
             @NotNull CallableMethod callableMethod,
@@ -2314,48 +2318,35 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
         assert valueArguments != null : "Failed to arrange value arguments by index: " + descriptor;
 
-        return pushMethodArgumentsWithoutCallReceiver(descriptor.getValueParameters(), valueArguments,
-                                                      callableMethod.getValueParameterTypes(), callGenerator, skipLast);
+        ArgumentGenerator argumentGenerator =
+                new CallBasedArgumentGenerator(this, callGenerator, descriptor.getValueParameters(),
+                                                      callableMethod.getValueParameterTypes());
+        return pushMethodArgumentsWithoutCallReceiver(valueArguments, skipLast, argumentGenerator);
     }
 
-    public int pushMethodArgumentsWithoutCallReceiver(
-            @NotNull List<ValueParameterDescriptor> valueParameters,
+    public static int pushMethodArgumentsWithoutCallReceiver(
             @NotNull List<ResolvedValueArgument> valueArguments,
-            @NotNull List<Type> valueParameterTypes,
-            @NotNull CallGenerator callGenerator,
-            boolean skipLast
+            boolean skipLast,
+            @NotNull ArgumentGenerator argumentGenerator
     ) {
-        int n = valueParameters.size();
-        if (n != valueArguments.size()) {
-            throw new IllegalStateException("Parameters and arguments size mismatch: " + n + " != " + valueArguments.size());
-        }
-
         int mask = 0;
-
+        int n = valueArguments.size();
         for (int i = 0; i < n; i++) {
             if (skipLast && i == n - 1) break;
 
-            ValueParameterDescriptor valueParameter = valueParameters.get(i);
             ResolvedValueArgument argument = valueArguments.get(i);
-            Type parameterType = valueParameterTypes.get(i);
             if (argument instanceof ExpressionValueArgument) {
-                ValueArgument valueArgument = ((ExpressionValueArgument) argument).getValueArgument();
-                assert valueArgument != null;
-                JetExpression argumentExpression = valueArgument.getArgumentExpression();
-                assert argumentExpression != null : valueArgument.asElement().getText();
-                callGenerator.genValueAndPut(valueParameter, argumentExpression, parameterType);
+                argumentGenerator.generateExpression(i, (ExpressionValueArgument) argument);
             }
             else if (argument instanceof DefaultValueArgument) {
-                pushDefaultValueOnStack(parameterType, v);
                 mask |= 1 << i;
-                callGenerator.afterParameterPut(parameterType, null, valueParameter);
+                argumentGenerator.generateDefault(i, (DefaultValueArgument) argument);
             }
             else if (argument instanceof VarargValueArgument) {
-                genVarargs((VarargValueArgument) argument, valueParameter.getType());
-                callGenerator.afterParameterPut(parameterType, null, valueParameter);
+                argumentGenerator.generateVararg(i, (VarargValueArgument) argument);
             }
             else {
-                throw new UnsupportedOperationException("Unsupported value argument: " + argument);
+                argumentGenerator.generateOther(i, argument);
             }
         }
 

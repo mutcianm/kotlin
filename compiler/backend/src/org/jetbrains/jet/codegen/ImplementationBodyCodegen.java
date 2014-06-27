@@ -46,10 +46,7 @@ import org.jetbrains.jet.lang.resolve.BindingContext;
 import org.jetbrains.jet.lang.resolve.DeclarationResolver;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.CallResolverUtil;
-import org.jetbrains.jet.lang.resolve.calls.model.DefaultValueArgument;
-import org.jetbrains.jet.lang.resolve.calls.model.ExpressionValueArgument;
-import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
-import org.jetbrains.jet.lang.resolve.calls.model.ResolvedValueArgument;
+import org.jetbrains.jet.lang.resolve.calls.model.*;
 import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
 import org.jetbrains.jet.lang.resolve.java.JvmAnnotationNames;
@@ -1561,8 +1558,8 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
     }
 
     private void generateDelegatorToConstructorCall(
-            InstructionAdapter iv, ExpressionCodegen codegen,
-            ConstructorDescriptor constructorDescriptor
+            final InstructionAdapter iv, ExpressionCodegen codegen,
+            final ConstructorDescriptor constructorDescriptor
     ) {
         ClassDescriptor classDecl = constructorDescriptor.getContainingDeclaration();
 
@@ -1586,34 +1583,39 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         CallableMethod superCallable = typeMapper.mapToCallableMethod(superConstructor);
 
         if (isAnonymousObject(descriptor) && superCall instanceof JetDelegatorToSuperCall) {
-            Integer nextVar = null;
             List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
             assert valueArguments != null : "Failed to arrange value arguments by index: " + superConstructor;
-            Type[] argumentAsmTypes = superCallable.getAsmMethod().getArgumentTypes();
+            final Type[] argumentAsmTypes = superCallable.getAsmMethod().getArgumentTypes();
             assert valueArguments.size() == argumentAsmTypes.length :
                     "Value argument sizes differ: " + valueArguments.size() + " != " + argumentAsmTypes.length;
-            int mask = 0;
-            // TODO (!): make parameter passing logic in pushMethodArguments extensible and reuse it here
-            for (int i = 0; i < valueArguments.size(); i++) {
-                ResolvedValueArgument valueArgument = valueArguments.get(i);
-                Type type = argumentAsmTypes[i];
-                if (valueArgument instanceof ExpressionValueArgument) {
-                    if (nextVar == null) {
-                        // "+1" because slot 0 is always occupied by "this" in constructors
-                        nextVar = findFirstSuperArgument(typeMapper.mapToCallableMethod(constructorDescriptor)) + 1;
-                    }
+            // TODO: figure out how to call invokeMethodWithArguments here
+            int mask = ExpressionCodegen.pushMethodArgumentsWithoutCallReceiver(valueArguments, false, new ArgumentGenerator() {
+                // "+1" because slot 0 is always occupied by "this" in constructors
+                int nextVar = findFirstSuperArgument(typeMapper.mapToCallableMethod(constructorDescriptor)) + 1;
+
+                @Override
+                public void generateExpression(int i, @NotNull ExpressionValueArgument argument) {
+                    generateSuperCallArgument(i);
+                }
+
+                @Override
+                public void generateDefault(int i, @NotNull DefaultValueArgument argument) {
+                    Type type = argumentAsmTypes[i];
+                    pushDefaultValueOnStack(type, iv);
+                }
+
+                @Override
+                public void generateVararg(int i, @NotNull VarargValueArgument argument) {
+                    generateSuperCallArgument(i);
+                }
+
+                private void generateSuperCallArgument(int i) {
+                    Type type = argumentAsmTypes[i];
+                    assert nextVar != -1 : "No arguments for super call of anonymous object found in " + constructorDescriptor;
                     iv.load(nextVar, type);
                     nextVar += type.getSize();
                 }
-                else if (valueArgument instanceof DefaultValueArgument) {
-                    pushDefaultValueOnStack(type, iv);
-                    mask |= 1 << i;
-                }
-                else {
-                    // TODO: support vararg
-                    throw new UnsupportedOperationException("Unsupported argument of object super call expression: " + valueArgument);
-                }
-            }
+            });
 
             if (mask != 0) {
                 iv.iconst(mask);
@@ -1636,7 +1638,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
             }
             i += type.getAsmType().getSize();
         }
-        throw new IllegalStateException("No arguments for super call of anonymous object found in " + method);
+        return -1;
     }
 
     @Override

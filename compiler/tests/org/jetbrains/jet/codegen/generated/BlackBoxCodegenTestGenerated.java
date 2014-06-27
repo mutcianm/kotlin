@@ -1729,7 +1729,6 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             @TestMetadata("anonymousObjectExtendsClassWithDefault.kt")
             public void testAnonymousObjectExtendsClassWithDefault() throws Exception {
                 doTest("compiler/testData/codegen/box/defaultArguments/constructor/anonymousObjectExtendsClassWithDefault.kt");
-                System.out.println(generateToText());
             }
             
             @TestMetadata("defArgs1.kt")
@@ -5174,6 +5173,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
     public static class Vararg extends AbstractBlackBoxCodegenTest {
         public void testAllFilesPresentInVararg() throws Exception {
             JetTestUtils.assertAllTestsPresentByMetadata(this.getClass(), "org.jetbrains.jet.generators.tests.TestsPackage", new File("compiler/testData/codegen/box/vararg"), Pattern.compile("^(.+)\\.kt$"), true);
+        }
+        
+        @TestMetadata("anonymousObjectSuperCallVararg.kt")
+        public void testAnonymousObjectSuperCallVararg() throws Exception {
+            doTest("compiler/testData/codegen/box/vararg/anonymousObjectSuperCallVararg.kt");
         }
         
         @TestMetadata("kt1978.kt")
