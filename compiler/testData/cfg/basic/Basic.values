@@ -51,7 +51,7 @@ a || false                                                                      
 {1}
 ---------------------
 1   <v0>: Int   NEW: r(1) -> <v0>
-1   <v0>: Int   COPY             
+1   <v0>: Int   COPY
 =====================
 == foo ==
 fun foo(a : Boolean, b : Int) : Unit {}

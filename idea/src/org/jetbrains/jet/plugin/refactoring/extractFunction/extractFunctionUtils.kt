@@ -88,8 +88,10 @@ private fun List<Instruction>.getResultType(
         options: ExtractionOptions): JetType {
     fun instructionToType(instruction: Instruction): JetType? {
         val expression = when (instruction) {
-            is ReturnValueInstruction ->
-                (instruction.element as JetReturnExpression).getReturnedExpression()
+            is ReturnValueInstruction -> {
+                val returnElement = instruction.element
+                if (returnElement is JetReturnExpression) returnElement.getReturnedExpression() else returnElement as? JetExpression
+            }
             is InstructionWithValue ->
                 instruction.outputValue?.element as? JetExpression
             else -> null
@@ -144,10 +146,15 @@ private fun List<Instruction>.analyzeControlFlow(
                 }
 
         when (insn) {
-            is ReturnValueInstruction ->
-                    if (isCurrentFunctionReturn(insn.element as JetReturnExpression)) {
-                        valuedReturnExits.add(insn)
-                    }
+            is ReturnValueInstruction -> {
+                val returnElement = insn.element
+                if (returnElement !is JetReturnExpression) {
+                    defaultExits.add(insn)
+                }
+                else if (isCurrentFunctionReturn(returnElement as JetReturnExpression)) {
+                    valuedReturnExits.add(insn)
+                }
+            }
 
             is AbstractJumpInstruction -> {
                 val element = insn.element
