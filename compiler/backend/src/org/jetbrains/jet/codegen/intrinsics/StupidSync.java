@@ -19,14 +19,19 @@ package org.jetbrains.jet.codegen.intrinsics;
 import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jet.codegen.CallableMethod;
 import org.jetbrains.jet.codegen.ExpressionCodegen;
 import org.jetbrains.jet.codegen.StackValue;
 import org.jetbrains.jet.lang.psi.JetCallExpression;
 import org.jetbrains.jet.lang.psi.JetExpression;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
-import org.jetbrains.jet.lang.resolve.calls.model.ResolvedValueArgument;
+import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterKind;
+import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterSignature;
+import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodSignature;
+import org.jetbrains.org.objectweb.asm.Opcodes;
 import org.jetbrains.org.objectweb.asm.Type;
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter;
+import org.jetbrains.org.objectweb.asm.commons.Method;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,14 +51,24 @@ public class StupidSync extends IntrinsicMethod {
             @Nullable StackValue receiver
     ) {
         assert element != null : "Element should not be null";
+
+        CallableMethod callableMethod = new CallableMethod(
+                Type.getObjectType("kotlin/jvm/internal/Intrinsics"),
+                null,
+                null,
+                new JvmMethodSignature(new Method("stupidSync", Type.getMethodDescriptor(OBJECT_TYPE, OBJECT_TYPE, FUNCTION0_TYPE)), null,
+                                       Arrays.asList(new JvmMethodParameterSignature(OBJECT_TYPE, JvmMethodParameterKind.VALUE),
+                                                     new JvmMethodParameterSignature(FUNCTION0_TYPE, JvmMethodParameterKind.VALUE))),
+                Opcodes.INVOKESTATIC,
+                null,
+                null,
+                null
+        );
+
         ResolvedCall<?> resolvedCall = codegen.resolvedCall(((JetCallExpression) element).getCalleeExpression());
 
-        List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
-        assert valueArguments != null : "Failed to arrange value arguments by index: " + resolvedCall.getResultingDescriptor();
+        codegen.invokeMethodWithArguments(null, callableMethod, resolvedCall, StackValue.none());
 
-        codegen.pushMethodArgumentsWithoutCallReceiver(resolvedCall.getResultingDescriptor().getValueParameters(), valueArguments,
-                                                       Arrays.asList(OBJECT_TYPE, FUNCTION0_TYPE), codegen.defaultCallGenerator, false);
-        v.invokestatic("kotlin/jvm/internal/Intrinsics", "stupidSync", Type.getMethodDescriptor(OBJECT_TYPE, OBJECT_TYPE, FUNCTION0_TYPE));
         return OBJECT_TYPE;
     }
 }
