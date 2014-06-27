@@ -859,8 +859,8 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
                         parameterIndex += type.getSize();
                     }
 
-                    String constructorJvmDescriptor = typeMapper.mapToCallableMethod(constructor).getAsmMethod().getDescriptor();
-                    iv.invokespecial(thisDescriptorType.getInternalName(), "<init>", constructorJvmDescriptor);
+                    Method constructorAsmMethod = typeMapper.mapSignature(constructor).getAsmMethod();
+                    iv.invokespecial(thisDescriptorType.getInternalName(), "<init>", constructorAsmMethod.getDescriptor());
 
                     iv.areturn(thisDescriptorType);
                 }
@@ -1570,8 +1570,6 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
             iv.load(2, Type.INT_TYPE);
         }
 
-        CallableMethod method = typeMapper.mapToCallableMethod(constructorDescriptor);
-
         ResolvedCall<?> resolvedCall = bindingContext.get(BindingContext.RESOLVED_CALL, ((JetCallElement) superCall).getCalleeExpression());
         assert resolvedCall != null;
         ConstructorDescriptor superConstructor = (ConstructorDescriptor) resolvedCall.getResultingDescriptor();
@@ -1585,7 +1583,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         CallableMethod superCallable = typeMapper.mapToCallableMethod(superConstructor);
 
         if (isAnonymousObject(descriptor) && superCall instanceof JetDelegatorToSuperCall) {
-            int nextVar = findFirstSuperArgument(method);
+            int nextVar = findFirstSuperArgument(typeMapper.mapToCallableMethod(constructorDescriptor));
             for (Type t : superCallable.getAsmMethod().getArgumentTypes()) {
                 iv.load(nextVar, t);
                 nextVar += t.getSize();
@@ -1674,10 +1672,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
                 throw new UnsupportedOperationException("unsupported type of enum constant initializer: " + specifier);
             }
 
-            ResolvedCall<?> resolvedCall =
-                    bindingContext.get(BindingContext.RESOLVED_CALL, ((JetDelegatorToSuperCall) specifier).getCalleeExpression());
-            assert resolvedCall != null : "Enum entry delegation specifier is unresolved: " + specifier.getText();
-
+            ResolvedCall<?> resolvedCall = codegen.resolvedCall(((JetDelegatorToSuperCall) specifier).getCalleeExpression());
             CallableMethod method = typeMapper.mapToCallableMethod((ConstructorDescriptor) resolvedCall.getResultingDescriptor());
 
             codegen.invokeMethodWithArguments(null, method, resolvedCall, StackValue.none());
