@@ -1726,6 +1726,12 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
                 doTest("compiler/testData/codegen/box/defaultArguments/constructor/annotation.kt");
             }
             
+            @TestMetadata("anonymousObjectExtendsClassWithDefault.kt")
+            public void testAnonymousObjectExtendsClassWithDefault() throws Exception {
+                doTest("compiler/testData/codegen/box/defaultArguments/constructor/anonymousObjectExtendsClassWithDefault.kt");
+                System.out.println(generateToText());
+            }
+            
             @TestMetadata("defArgs1.kt")
             public void testDefArgs1() throws Exception {
                 doTest("compiler/testData/codegen/box/defaultArguments/constructor/defArgs1.kt");

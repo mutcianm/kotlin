@@ -36,6 +36,9 @@ import org.jetbrains.jet.lang.resolve.BindingContext;
 import org.jetbrains.jet.lang.resolve.BindingContextUtils;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.OverrideResolver;
+import org.jetbrains.jet.lang.resolve.calls.model.DefaultValueArgument;
+import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
+import org.jetbrains.jet.lang.resolve.calls.model.ResolvedValueArgument;
 import org.jetbrains.jet.lang.resolve.constants.CompileTimeConstant;
 import org.jetbrains.jet.lang.resolve.constants.StringValue;
 import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
@@ -797,14 +800,22 @@ public class JetTypeMapper {
 
         JetDelegatorToSuperCall superCall = closure.getSuperCall();
         if (superCall != null) {
-            DeclarationDescriptor superDescriptor = bindingContext
-                    .get(BindingContext.REFERENCE_TARGET, superCall.getCalleeExpression().getConstructorReferenceExpression());
-
+            ResolvedCall<?> resolvedCall = bindingContext.get(BindingContext.RESOLVED_CALL, superCall.getCalleeExpression());
+            assert resolvedCall != null : "Unresolved super call: " + superCall.getText();
+            CallableDescriptor superDescriptor = resolvedCall.getResultingDescriptor();
             if (superDescriptor instanceof ConstructorDescriptor && isAnonymousObject(descriptor.getContainingDeclaration())) {
-                for (JvmMethodParameterSignature parameter : mapSignature((ConstructorDescriptor) superDescriptor).getValueParameters()) {
-                    signatureWriter.writeParameterType(JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM);
-                    signatureWriter.writeAsmType(parameter.getAsmType());
-                    signatureWriter.writeParameterTypeEnd();
+                List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
+                assert valueArguments != null : "Failed to arrange value arguments by index: " + descriptor;
+                List<JvmMethodParameterSignature> parameters = mapSignature((FunctionDescriptor) superDescriptor).getValueParameters();
+                assert valueArguments.size() == parameters.size() : "Parameters != arguments for super call: " + superCall.getText();
+                for (int i = 0; i < parameters.size(); i++) {
+                    ResolvedValueArgument valueArgument = valueArguments.get(i);
+                    if (!(valueArgument instanceof DefaultValueArgument)) {
+                        JvmMethodParameterSignature parameter = parameters.get(i);
+                        signatureWriter.writeParameterType(JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM);
+                        signatureWriter.writeAsmType(parameter.getAsmType());
+                        signatureWriter.writeParameterTypeEnd();
+                    }
                 }
             }
         }

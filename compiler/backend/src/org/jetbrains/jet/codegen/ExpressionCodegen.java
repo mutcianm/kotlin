@@ -50,6 +50,8 @@ import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstant;
 import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
 import org.jetbrains.jet.lang.resolve.java.descriptor.SamConstructorDescriptor;
+import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterKind;
+import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodParameterSignature;
 import org.jetbrains.jet.lang.resolve.java.jvmSignature.JvmMethodSignature;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.resolve.scopes.receivers.*;
@@ -1325,11 +1327,10 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         CalculatedClosure closure = generateObjectLiteral(expression);
 
         ConstructorDescriptor constructorDescriptor = bindingContext.get(CONSTRUCTOR, expression.getObjectDeclaration());
-        assert constructorDescriptor != null;
-        Method constructor = typeMapper.mapSignature(constructorDescriptor).getAsmMethod();
+        assert constructorDescriptor != null : "Unresolved constructor: " + expression.getText();
+        JvmMethodSignature constructor = typeMapper.mapSignature(constructorDescriptor);
 
-        Type type = bindingContext.get(ASM_TYPE, constructorDescriptor.getContainingDeclaration());
-        assert type != null;
+        Type type = typeMapper.mapType(constructorDescriptor.getContainingDeclaration());
 
         v.anew(type);
         v.dup();
@@ -1339,43 +1340,68 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         JetDelegatorToSuperCall superCall = closure.getSuperCall();
         if (superCall != null) {
             ResolvedCall<?> resolvedCall = resolvedCall(superCall.getCalleeExpression());
-            ConstructorDescriptor superConstructor = (ConstructorDescriptor) resolvedCall.getResultingDescriptor();
-            Type[] argumentTypes = typeMapper.mapSignature(superConstructor).getAsmMethod().getArgumentTypes();
-            pushMethodArgumentsWithoutCallReceiver(resolvedCall, Arrays.asList(argumentTypes), false, defaultCallGenerator);
+            List<ValueParameterDescriptor> superValueParameters = resolvedCall.getResultingDescriptor().getValueParameters();
+            List<ResolvedValueArgument> superValueArguments = resolvedCall.getValueArgumentsByIndex();
+            assert superValueArguments != null : "Failed to arrange value arguments by index: " + resolvedCall.getResultingDescriptor();
+            int n = superValueParameters.size();
+            List<ValueParameterDescriptor> valueParameters = new ArrayList<ValueParameterDescriptor>(n);
+            List<ResolvedValueArgument> valueArguments = new ArrayList<ResolvedValueArgument>(n);
+            for (int i = 0; i < n; i++) {
+                ResolvedValueArgument argument = superValueArguments.get(i);
+                if (!(argument instanceof DefaultValueArgument)) {
+                    valueArguments.add(argument);
+                    valueParameters.add(superValueParameters.get(i));
+                }
+            }
+            // Captured this and variables are irrelevant at this point, because we pushed them on the stack earlier
+            pushMethodArgumentsWithoutCallReceiver(valueParameters, valueArguments, filterAnonymousObjectSuperCallParameters(constructor),
+                                                   defaultCallGenerator, false);
         }
 
-        v.invokespecial(type.getInternalName(), "<init>", constructor.getDescriptor());
+        v.invokespecial(type.getInternalName(), "<init>", constructor.getAsmMethod().getDescriptor());
         return StackValue.onStack(type);
     }
 
+    @NotNull
+    private static List<Type> filterAnonymousObjectSuperCallParameters(@NotNull JvmMethodSignature constructor) {
+        List<JvmMethodParameterSignature> valueParameters = constructor.getValueParameters();
+        List<Type> result = new ArrayList<Type>(valueParameters.size());
+        for (JvmMethodParameterSignature parameter : valueParameters) {
+            if (parameter.getKind() == JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM) {
+                result.add(parameter.getAsmType());
+            }
+        }
+        return result;
+    }
+
     public void pushClosureOnStack(@Nullable CalculatedClosure closure, boolean ignoreThisAndReceiver, @NotNull CallGenerator callGenerator) {
-        if (closure != null) {
-            int paramIndex = 0;
-            if (!ignoreThisAndReceiver) {
-                ClassDescriptor captureThis = closure.getCaptureThis();
-                if (captureThis != null) {
-                    StackValue thisOrOuter = generateThisOrOuter(captureThis, false);
+        if (closure == null) return;
 
-                    assert !isPrimitive(thisOrOuter.type) : "This or outer should be non primitive: " + thisOrOuter.type;
-                    callGenerator.putCapturedValueOnStack(thisOrOuter, thisOrOuter.type, paramIndex++);
-                }
+        int paramIndex = 0;
+        if (!ignoreThisAndReceiver) {
+            ClassDescriptor captureThis = closure.getCaptureThis();
+            if (captureThis != null) {
+                StackValue thisOrOuter = generateThisOrOuter(captureThis, false);
 
-                JetType captureReceiver = closure.getCaptureReceiverType();
-                if (captureReceiver != null) {
-                    Type asmType = typeMapper.mapType(captureReceiver);
-                    StackValue.Local capturedReceiver = StackValue.local(context.isStatic() ? 0 : 1, asmType);
-                    callGenerator.putCapturedValueOnStack(capturedReceiver, capturedReceiver.type, paramIndex++);
-                }
+                assert !isPrimitive(thisOrOuter.type) : "This or outer should be non primitive: " + thisOrOuter.type;
+                callGenerator.putCapturedValueOnStack(thisOrOuter, thisOrOuter.type, paramIndex++);
             }
 
-            for (Map.Entry<DeclarationDescriptor, EnclosedValueDescriptor> entry : closure.getCaptureVariables().entrySet()) {
-                Type sharedVarType = typeMapper.getSharedVarType(entry.getKey());
-                if (sharedVarType == null) {
-                    sharedVarType = typeMapper.mapType((VariableDescriptor) entry.getKey());
-                }
-                StackValue capturedVar = entry.getValue().getOuterValue(this);
-                callGenerator.putCapturedValueOnStack(capturedVar, sharedVarType, paramIndex++);
+            JetType captureReceiver = closure.getCaptureReceiverType();
+            if (captureReceiver != null) {
+                Type asmType = typeMapper.mapType(captureReceiver);
+                StackValue.Local capturedReceiver = StackValue.local(context.isStatic() ? 0 : 1, asmType);
+                callGenerator.putCapturedValueOnStack(capturedReceiver, capturedReceiver.type, paramIndex++);
             }
+        }
+
+        for (Map.Entry<DeclarationDescriptor, EnclosedValueDescriptor> entry : closure.getCaptureVariables().entrySet()) {
+            Type sharedVarType = typeMapper.getSharedVarType(entry.getKey());
+            if (sharedVarType == null) {
+                sharedVarType = typeMapper.mapType((VariableDescriptor) entry.getKey());
+            }
+            StackValue capturedVar = entry.getValue().getOuterValue(this);
+            callGenerator.putCapturedValueOnStack(capturedVar, sharedVarType, paramIndex++);
         }
     }
 
@@ -2285,22 +2311,20 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
         callGenerator.putHiddenParams();
 
-        return pushMethodArgumentsWithoutCallReceiver(resolvedCall, callableMethod.getValueParameterTypes(), skipLast, callGenerator);
+        List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
+        assert valueArguments != null : "Failed to arrange value arguments by index: " + descriptor;
+
+        return pushMethodArgumentsWithoutCallReceiver(descriptor.getValueParameters(), valueArguments,
+                                                      callableMethod.getValueParameterTypes(), callGenerator, skipLast);
     }
 
     public int pushMethodArgumentsWithoutCallReceiver(
-            @NotNull ResolvedCall<?> resolvedCall,
-            List<Type> valueParameterTypes,
-            boolean skipLast,
-            @NotNull CallGenerator callGenerator
+            @NotNull List<ValueParameterDescriptor> valueParameters,
+            @NotNull List<ResolvedValueArgument> valueArguments,
+            @NotNull List<Type> valueParameterTypes,
+            @NotNull CallGenerator callGenerator,
+            boolean skipLast
     ) {
-        List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
-        CallableDescriptor fd = resolvedCall.getResultingDescriptor();
-        if (valueArguments == null) {
-            throw new IllegalStateException("Failed to arrange value arguments by index: " + fd);
-        }
-        List<ValueParameterDescriptor> valueParameters = fd.getValueParameters();
-
         int n = valueParameters.size();
         if (n != valueArguments.size()) {
             throw new IllegalStateException("Parameters and arguments size mismatch: " + n + " != " + valueArguments.size());

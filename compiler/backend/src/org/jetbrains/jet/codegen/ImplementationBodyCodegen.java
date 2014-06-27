@@ -46,7 +46,10 @@ import org.jetbrains.jet.lang.resolve.BindingContext;
 import org.jetbrains.jet.lang.resolve.DeclarationResolver;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.CallResolverUtil;
+import org.jetbrains.jet.lang.resolve.calls.model.DefaultValueArgument;
+import org.jetbrains.jet.lang.resolve.calls.model.ExpressionValueArgument;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
+import org.jetbrains.jet.lang.resolve.calls.model.ResolvedValueArgument;
 import org.jetbrains.jet.lang.resolve.java.AsmTypeConstants;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
 import org.jetbrains.jet.lang.resolve.java.JvmAnnotationNames;
@@ -1583,12 +1586,42 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         CallableMethod superCallable = typeMapper.mapToCallableMethod(superConstructor);
 
         if (isAnonymousObject(descriptor) && superCall instanceof JetDelegatorToSuperCall) {
-            int nextVar = findFirstSuperArgument(typeMapper.mapToCallableMethod(constructorDescriptor));
-            for (Type t : superCallable.getAsmMethod().getArgumentTypes()) {
-                iv.load(nextVar, t);
-                nextVar += t.getSize();
+            Integer nextVar = null;
+            List<ResolvedValueArgument> valueArguments = resolvedCall.getValueArgumentsByIndex();
+            assert valueArguments != null : "Failed to arrange value arguments by index: " + superConstructor;
+            Type[] argumentAsmTypes = superCallable.getAsmMethod().getArgumentTypes();
+            assert valueArguments.size() == argumentAsmTypes.length :
+                    "Value argument sizes differ: " + valueArguments.size() + " != " + argumentAsmTypes.length;
+            int mask = 0;
+            // TODO (!): make parameter passing logic in pushMethodArguments extensible and reuse it here
+            for (int i = 0; i < valueArguments.size(); i++) {
+                ResolvedValueArgument valueArgument = valueArguments.get(i);
+                Type type = argumentAsmTypes[i];
+                if (valueArgument instanceof ExpressionValueArgument) {
+                    if (nextVar == null) {
+                        // "+1" because slot 0 is always occupied by "this" in constructors
+                        nextVar = findFirstSuperArgument(typeMapper.mapToCallableMethod(constructorDescriptor)) + 1;
+                    }
+                    iv.load(nextVar, type);
+                    nextVar += type.getSize();
+                }
+                else if (valueArgument instanceof DefaultValueArgument) {
+                    pushDefaultValueOnStack(type, iv);
+                    mask |= 1 << i;
+                }
+                else {
+                    // TODO: support vararg
+                    throw new UnsupportedOperationException("Unsupported argument of object super call expression: " + valueArgument);
+                }
             }
-            superCallable.invokeWithNotNullAssertion(codegen.v, state, resolvedCall);
+
+            if (mask != 0) {
+                iv.iconst(mask);
+                superCallable.invokeDefaultWithNotNullAssertion(codegen.v, state, resolvedCall);
+            }
+            else {
+                superCallable.invokeWithNotNullAssertion(codegen.v, state, resolvedCall);
+            }
         }
         else {
             codegen.invokeMethodWithArguments(null, superCallable, resolvedCall, StackValue.none());
@@ -1599,11 +1632,11 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         int i = 0;
         for (JvmMethodParameterSignature type : method.getValueParameters()) {
             if (type.getKind() == JvmMethodParameterKind.SUPER_OF_ANONYMOUS_CALL_PARAM) {
-                return i + 1; // because of this
+                return i;
             }
             i += type.getAsmType().getSize();
         }
-        return -1;
+        throw new IllegalStateException("No arguments for super call of anonymous object found in " + method);
     }
 
     @Override
@@ -1611,7 +1644,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         if (declaration instanceof JetEnumEntry) {
             String name = declaration.getName();
             assert name != null : "Enum entry has no name: " + declaration.getText();
-            String desc = "L" + classAsmType.getInternalName() + ";";
+            String desc = classAsmType.getDescriptor();
             ClassDescriptor entryDescriptor = bindingContext.get(BindingContext.CLASS, declaration);
             v.newField(OtherOrigin(declaration, entryDescriptor), ACC_PUBLIC | ACC_ENUM | ACC_STATIC | ACC_FINAL, name, desc, null, null);
             myEnumConstants.add((JetEnumEntry) declaration);
