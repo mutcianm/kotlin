@@ -160,10 +160,6 @@ public class JvmCodegenUtil {
             PackageFragmentDescriptor fragment1 = (PackageFragmentDescriptor) owner1;
             PackageFragmentDescriptor fragment2 = (PackageFragmentDescriptor) owner2;
 
-            if (!IncrementalCompilation.ENABLED) {
-                return fragment1 == fragment2;
-            }
-
             // backing field should be used directly within same module of same package
             return fragment1.getFqName().equals(fragment2.getFqName()) && DescriptorUtils.areInSameModule(fragment1, fragment2)
                    && (fragment1 == fragment2

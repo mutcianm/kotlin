@@ -144,7 +144,7 @@ public class JetTypeMapper {
                                                       ? ((PropertyAccessorDescriptor) descriptor).getCorrespondingProperty()
                                                       : descriptor;
 
-            if (descriptorToCheck instanceof DeserializedCallableMemberDescriptor && IncrementalCompilation.ENABLED) {
+            if (descriptorToCheck instanceof DeserializedCallableMemberDescriptor) {
                 if (descriptor.getContainingDeclaration() instanceof IncrementalPackageFragmentProvider.IncrementalPackageFragment ||
                     isContainedByCompiledPartOfOurModule(descriptor)) {
                     FqName packagePartFqName = PackagePartClassUtils.getPackagePartFqName((DeserializedCallableMemberDescriptor) descriptorToCheck);
