@@ -445,7 +445,11 @@ public class JetControlFlowProcessor {
                 builder.unsupported(parentExpression); // TODO
             }
             else {
-                recordWrite(left, accessTarget, rhsValue, receiverValues, parentExpression);
+                JetExpression right =
+                        parentExpression instanceof JetProperty ? ((JetProperty) parentExpression).getInitializer() :
+                        parentExpression instanceof JetBinaryExpression ? ((JetBinaryExpression) parentExpression).getRight() :
+                        null;
+                recordWrite(left, right, accessTarget, rhsValue, receiverValues, parentExpression);
             }
         }
 
@@ -521,6 +525,7 @@ public class JetControlFlowProcessor {
 
         private void recordWrite(
                 @NotNull JetExpression left,
+                @Nullable JetExpression right,
                 @NotNull AccessTarget target,
                 @Nullable PseudoValue rightValue,
                 @NotNull Map<PseudoValue, ReceiverValue> receiverValues,
@@ -528,7 +533,9 @@ public class JetControlFlowProcessor {
         ) {
             VariableDescriptor descriptor = BindingContextUtils.extractVariableDescriptorIfAny(trace.getBindingContext(), left, false);
             if (descriptor != null) {
-                PseudoValue rValue = rightValue != null ? rightValue : createSyntheticValue(parentExpression);
+                PseudoValue rValue = rightValue != null ? rightValue :
+                                     right != null ? createNonSyntheticValue(right) :
+                                     createSyntheticValue(parentExpression);
                 builder.write(parentExpression, left, rValue, target, receiverValues);
             }
         }
