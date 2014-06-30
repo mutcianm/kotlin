@@ -63,6 +63,7 @@ import org.jetbrains.jet.lexer.JetTokens;
 import org.jetbrains.jet.renderer.DescriptorRenderer;
 import org.jetbrains.org.objectweb.asm.Label;
 import org.jetbrains.org.objectweb.asm.MethodVisitor;
+import org.jetbrains.org.objectweb.asm.Opcodes;
 import org.jetbrains.org.objectweb.asm.Type;
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter;
 import org.jetbrains.org.objectweb.asm.commons.Method;
@@ -1576,34 +1577,35 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     @Override
     public StackValue visitReturnExpression(@NotNull JetReturnExpression expression, StackValue receiver) {
         JetExpression returnedExpression = expression.getReturnedExpression();
-        if (returnedExpression != null) {
-            CallableMemberDescriptor descriptor = getContext().getContextDescriptor();
-            Type nonLocalReturn = isNonLocalReturn(descriptor, expression);
-            boolean isNonLocalReturn = nonLocalReturn != null;
-            if (isNonLocalReturn && !state.isInlineEnabled()) {
-                throw new CompilationException("Non local returns requires enabled inlining", null, returnedExpression);
-            }
+        CallableMemberDescriptor descriptor = getContext().getContextDescriptor();
+        Type nonLocalReturn = isNonLocalReturn(descriptor, expression);
+        boolean isNonLocalReturn = nonLocalReturn != null;
+        if (isNonLocalReturn && !state.isInlineEnabled()) {
+            throw new CompilationException("Non local returns requires enabled inlining", null, expression);
+        }
 
-            Type returnType = isNonLocalReturn ? nonLocalReturn : this.returnType;
+        Type returnType = isNonLocalReturn ? nonLocalReturn : this.returnType;
+        if (returnedExpression != null) {
             gen(returnedExpression, returnType);
-            boolean hasFinallyBLocks = hasFinallyBLocks();
-            if (hasFinallyBLocks) {
+        }
+
+        if (hasFinallyBLocks()) {
+            if (!Type.VOID_TYPE.equals(returnType)) {
                 int returnValIndex = myFrameMap.enterTemp(returnType);
                 StackValue.local(returnValIndex, returnType).store(returnType, v);
                 doFinallyOnReturn();
                 StackValue.local(returnValIndex, returnType).put(returnType, v);
                 myFrameMap.leaveTemp(returnType);
+            } else {
+                doFinallyOnReturn();
             }
+        }
 
-            if (isNonLocalReturn) {
-                InlineCodegenUtil.generateGlobalReturnFlag(v, expression);
-            }
-            v.areturn(returnType);
+        if (isNonLocalReturn) {
+            InlineCodegenUtil.generateGlobalReturnFlag(v, expression);
         }
-        else {
-            doFinallyOnReturn();
-            v.visitInsn(RETURN);
-        }
+        v.visitInsn(returnType.getOpcode(Opcodes.IRETURN));
+
         return StackValue.none();
     }
 
