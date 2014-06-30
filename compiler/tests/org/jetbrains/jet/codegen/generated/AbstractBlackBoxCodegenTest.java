@@ -83,8 +83,8 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
     }
 
     private void doTestMultiFile(@NotNull List<String> files) {
-        Collections.sort(files);
         createEnvironmentWithMockJdkAndIdeaAnnotations(ConfigurationKind.ALL);
+        Collections.sort(files);
         loadFiles(ArrayUtil.toStringArray(files));
         blackBox();
     }
