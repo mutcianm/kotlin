@@ -38,6 +38,7 @@ import org.jetbrains.jet.lang.types.JetType
 import org.jetbrains.jet.lang.resolve.java.lazy.descriptors.LazyJavaMemberScope.MethodSignatureData
 import org.jetbrains.jet.lang.resolve.java.descriptor.SamConstructorDescriptor
 import org.jetbrains.jet.lang.resolve.name.SpecialNames
+import org.jetbrains.jet.lang.resolve.kotlin.KotlinJvmBinaryClass
 
 public abstract class LazyJavaPackageFragmentScope(
         c: LazyJavaResolverContext,
@@ -93,9 +94,18 @@ public class LazyPackageFragmentScopeForJavaPackage(
         packageFragment: LazyPackageFragmentForJavaPackage
 ) : LazyJavaPackageFragmentScope(c, packageFragment) {
 
-    private val deserializedPackageScope = c.storageManager.createLazyValue {
+    // TODO: Storing references is a temporary hack until modules infrastructure is implemented.
+    // See JetTypeMapperWithOutDirectories for details
+    private val _kotlinBinaryClass = c.storageManager.createNullableLazyValue {
         val packageClassFqName = PackageClassUtils.getPackageClassFqName(fqName)
-        val kotlinBinaryClass = c.kotlinClassFinder.findKotlinClass(packageClassFqName)
+        c.kotlinClassFinder.findKotlinClass(packageClassFqName)
+    }
+
+    public val kotlinBinaryClass: KotlinJvmBinaryClass?
+        get() = _kotlinBinaryClass()
+
+    private val deserializedPackageScope = c.storageManager.createLazyValue {
+        val kotlinBinaryClass = kotlinBinaryClass
         if (kotlinBinaryClass == null)
             JetScope.EMPTY
         else

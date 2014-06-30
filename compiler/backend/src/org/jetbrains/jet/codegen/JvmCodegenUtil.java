@@ -33,6 +33,7 @@ import org.jetbrains.jet.lang.descriptors.impl.SimpleFunctionDescriptorImpl;
 import org.jetbrains.jet.lang.descriptors.impl.TypeParameterDescriptorImpl;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.CallResolverUtil;
+import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalPackageFragmentProvider;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.types.JetType;
 import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns;
@@ -164,8 +165,9 @@ public class JvmCodegenUtil {
             }
 
             // backing field should be used directly within same module of same package
-            // TODO calls from other modules/libraries should use facade: KT-4590
-            return fragment1.getFqName().equals(fragment2.getFqName()) && DescriptorUtils.areInSameModule(fragment1, fragment2);
+            return fragment1.getFqName().equals(fragment2.getFqName()) && DescriptorUtils.areInSameModule(fragment1, fragment2)
+                   && (fragment1 == fragment2
+                       || fragment2 instanceof IncrementalPackageFragmentProvider.IncrementalPackageFragment);
         }
         return false;
     }
