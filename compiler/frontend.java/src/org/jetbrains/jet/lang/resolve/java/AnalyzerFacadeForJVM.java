@@ -109,7 +109,7 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
         GlobalContextImpl globalContext = ContextPackage.GlobalContext();
 
         List<JetFile> filesToAnalyze = new ArrayList<JetFile>(files);
-        filesToAnalyze.add(searchForAndroidDeclarations(project));
+        searchAndAddAndroidDeclarations(project, filesToAnalyze);
 
         DeclarationProviderFactory declarationProviderFactory =
                 DeclarationProviderFactoryService.createDeclarationProviderFactory(project, globalContext.getStorageManager(), filesToAnalyze);
@@ -131,10 +131,12 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
         return new JvmSetup(resolveWithJava.getResolveSession(), resolveWithJava.getJavaDescriptorResolver());
     }
 
-    private static JetFile searchForAndroidDeclarations(Project project) {
+    private static Collection<JetFile> searchAndAddAndroidDeclarations(Project project, Collection<JetFile> files) {
         AndroidUIXmlPathProvider provider = ServiceManager.getService(project, AndroidUIXmlPathProvider.class);
         Collection<File> paths = provider.getPaths();
-        return new AndroidUIXmlParser(project, paths).parseToPsi();
+        JetFile file = new AndroidUIXmlParser(project, paths).parseToPsi();
+        if (file != null) files.add(file);
+        return files;
     }
 
     @NotNull
@@ -157,7 +159,7 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
         );
 
         List<JetFile> filesToAnalyze = new ArrayList<JetFile>(files);
-        filesToAnalyze.add(searchForAndroidDeclarations(project));
+        searchAndAddAndroidDeclarations(project, filesToAnalyze);
 
         InjectorForTopDownAnalyzerForJvm injector = new InjectorForTopDownAnalyzerForJvm(project, topDownAnalysisParameters, trace, module);
         try {

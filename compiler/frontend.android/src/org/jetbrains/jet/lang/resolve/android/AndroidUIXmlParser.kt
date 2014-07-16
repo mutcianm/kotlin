@@ -11,19 +11,21 @@ import org.jetbrains.jet.lang.psi.JetPsiFactory
 
 class AndroidUIXmlParser(val project: Project?, val searchPaths: Collection<File>) {
 
+    inner class NoUIXMLsFound: Exception("No android UI xmls found in ${searchPaths.joinToString(", ")}")
+
     val ids: MutableCollection<AndroidWidget> = ArrayList()
     val kw = KotlinStringWriter()
     val androidImports = arrayListOf("android.app.Activity",
                                      "android.view.View",
                                      "android.widget.*")
 
-    public fun parse(): String {
-        doParse()
-        return produceKotlinSignatures().toString()
+    public fun parseToString(): String? {
+        return doParse()
     }
 
-    public fun parseToPsi(): JetFile {
-        return JetPsiFactory.createFile(project, parse())
+    public fun parseToPsi(): JetFile? {
+        val s = parseToString()
+        return if (s != null) JetPsiFactory.createFile(project, s) else null
     }
 
     private fun isAndroidUIXml(file: File): Boolean {
@@ -49,7 +51,8 @@ class AndroidUIXmlParser(val project: Project?, val searchPaths: Collection<File
         kw.writeEmptyLine()
     }
 
-    private fun doParse() {
+    private fun doParse(): String? {
+        if (searchPaths.empty) return null
         val xmlStreams = searchForUIXml(searchPaths).map { FileInputStream(it) }
         val factory = SAXParserFactory.newInstance()
         factory?.setNamespaceAware(true)
@@ -59,6 +62,7 @@ class AndroidUIXmlParser(val project: Project?, val searchPaths: Collection<File
         for (xmlStream in xmlStreams) {
             parser.parse(xmlStream, handler)
         }
+        return produceKotlinSignatures().toString()
     }
 
     private fun widgetCallback(id: String, className: String) {
