@@ -18,6 +18,7 @@ package org.jetbrains.jet.lang.resolve.java;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
@@ -35,6 +36,8 @@ import org.jetbrains.jet.lang.resolve.BindingTrace;
 import org.jetbrains.jet.lang.resolve.BindingTraceContext;
 import org.jetbrains.jet.lang.resolve.ImportPath;
 import org.jetbrains.jet.lang.resolve.TopDownAnalysisParameters;
+import org.jetbrains.jet.lang.resolve.android.AndroidUIXmlParser;
+import org.jetbrains.jet.lang.resolve.android.AndroidUIXmlPathProvider;
 import org.jetbrains.jet.lang.resolve.java.mapping.JavaToKotlinClassMap;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCache;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCacheProvider;
@@ -46,6 +49,7 @@ import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -104,8 +108,11 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
     ) {
         GlobalContextImpl globalContext = ContextPackage.GlobalContext();
 
+        List<JetFile> filesToAnalyze = new ArrayList<JetFile>(files);
+        filesToAnalyze.add(searchForAndroidDeclarations(project));
+
         DeclarationProviderFactory declarationProviderFactory =
-                DeclarationProviderFactoryService.createDeclarationProviderFactory(project, globalContext.getStorageManager(), files);
+                DeclarationProviderFactoryService.createDeclarationProviderFactory(project, globalContext.getStorageManager(), filesToAnalyze);
 
         InjectorForLazyResolveWithJava resolveWithJava = new InjectorForLazyResolveWithJava(
                 project,
@@ -122,6 +129,12 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
                     KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider());
         }
         return new JvmSetup(resolveWithJava.getResolveSession(), resolveWithJava.getJavaDescriptorResolver());
+    }
+
+    private static JetFile searchForAndroidDeclarations(Project project) {
+        AndroidUIXmlPathProvider provider = ServiceManager.getService(project, AndroidUIXmlPathProvider.class);
+        Collection<File> paths = provider.getPaths();
+        return new AndroidUIXmlParser(project, paths).parseToPsi();
     }
 
     @NotNull
@@ -143,6 +156,9 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
                 false
         );
 
+        List<JetFile> filesToAnalyze = new ArrayList<JetFile>(files);
+        filesToAnalyze.add(searchForAndroidDeclarations(project));
+
         InjectorForTopDownAnalyzerForJvm injector = new InjectorForTopDownAnalyzerForJvm(project, topDownAnalysisParameters, trace, module);
         try {
             module.addFragmentProvider(DependencyKind.BINARIES, injector.getJavaDescriptorResolver().getPackageFragmentProvider());
@@ -154,14 +170,14 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
                     module.addFragmentProvider(
                             DependencyKind.SOURCES,
                             new IncrementalPackageFragmentProvider(
-                                    files, module, globalContext.getStorageManager(), injector.getDeserializationGlobalContextForJava(),
+                                    filesToAnalyze, module, globalContext.getStorageManager(), injector.getDeserializationGlobalContextForJava(),
                                     incrementalCache, moduleId, injector.getJavaDescriptorResolver()
                             )
                     );
                 }
             }
 
-            injector.getTopDownAnalyzer().analyzeFiles(topDownAnalysisParameters, files);
+            injector.getTopDownAnalyzer().analyzeFiles(topDownAnalysisParameters, filesToAnalyze);
             return AnalyzeExhaust.success(trace.getBindingContext(), module);
         }
         finally {
