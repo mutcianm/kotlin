@@ -79,6 +79,10 @@ public class K2JVMCompilerArguments extends CommonCompilerArguments {
     @ValueDescription("{on,off}")
     public String inline;
 
+    @Argument(value = "androidRes", description = "Android resources path")
+    @ValueDescription("<path>")
+    public String androidRes;
+
     @Override
     @NotNull
     public String executableScriptFileName() {
