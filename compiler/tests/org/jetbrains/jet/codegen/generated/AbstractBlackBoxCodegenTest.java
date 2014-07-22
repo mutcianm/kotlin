@@ -68,8 +68,6 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
     }
 
     public void doTestMultiFile(@NotNull String folderName) {
-        createEnvironmentWithMockJdkAndIdeaAnnotations(ConfigurationKind.ALL);
-
         final List<String> files = new ArrayList<String>(2);
         FileUtil.processFilesRecursively(new File(folderName), new Processor<File>() {
             @Override
@@ -81,14 +79,23 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
             }
         });
 
-        Collections.sort(files);
+        doTestMultiFile(files);
+    }
 
+    private void doTestMultiFile(@NotNull List<String> files) {
+        createEnvironmentWithMockJdkAndIdeaAnnotations(ConfigurationKind.ALL);
+        Collections.sort(files);
         loadFiles(ArrayUtil.toStringArray(files));
         blackBox();
     }
 
-    public void doTestMultiFileWithInlineCheck(@NotNull String folderName) {
-        doTestMultiFile(folderName);
+    public void doTestMultiFileWithInlineCheck(@NotNull String firstFileName) {
+        firstFileName = relativePath(new File(firstFileName));
+        List<String> inputFiles = new ArrayList<String>(2);
+        inputFiles.add(firstFileName);
+        inputFiles.add(firstFileName.substring(0, firstFileName.length() - "1.kt".length()) + "2.kt");
+
+        doTestMultiFile(inputFiles);
         InlineTestUtil.checkNoCallsToInline(initializedClassLoader.getAllGeneratedFiles());
     }
 
@@ -97,7 +104,8 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
         File javaClassesTempDirectory = compileJava(ktFile.replaceFirst("\\.kt$", ".java"));
 
         myEnvironment = JetCoreEnvironment.createForTests(getTestRootDisposable(), JetTestUtils.compilerConfigurationForTests(
-                ConfigurationKind.ALL, TestJdkKind.MOCK_JDK, JetTestUtils.getAnnotationsJar(), javaClassesTempDirectory));
+                ConfigurationKind.ALL, TestJdkKind.FULL_JDK, JetTestUtils.getAnnotationsJar(), javaClassesTempDirectory
+        ));
 
         loadFile(ktFile);
         blackBox();

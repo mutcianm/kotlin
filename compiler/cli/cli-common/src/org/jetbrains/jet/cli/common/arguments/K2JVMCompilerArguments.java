@@ -79,6 +79,10 @@ public class K2JVMCompilerArguments extends CommonCompilerArguments {
     @ValueDescription("{on,off}")
     public String inline;
 
+    @Argument(value = "optimize", description = "Optimization mode (default is on)")
+    @ValueDescription("{on,off}")
+    public String optimize;
+
     @Argument(value = "androidRes", description = "Android resources path")
     @ValueDescription("<path>")
     public String androidRes;
