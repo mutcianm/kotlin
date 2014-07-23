@@ -41,7 +41,6 @@ import org.jetbrains.jet.lang.resolve.BindingTraceContext;
 import org.jetbrains.jet.lang.resolve.ImportPath;
 import org.jetbrains.jet.lang.resolve.TopDownAnalysisParameters;
 import org.jetbrains.jet.lang.resolve.android.AndroidUIXmlParser;
-import org.jetbrains.jet.lang.resolve.android.AndroidUIXmlPathProvider;
 import org.jetbrains.jet.lang.resolve.java.mapping.JavaToKotlinClassMap;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCache;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCacheProvider;
@@ -123,8 +122,11 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
     ) {
         GlobalContextImpl globalContext = ContextPackage.GlobalContext();
 
+        List<JetFile> filesToAnalyze = new ArrayList<JetFile>(syntheticFiles);
+        searchAndAddAndroidDeclarations(project, filesToAnalyze);
+
         DeclarationProviderFactory declarationProviderFactory = DeclarationProviderFactoryService.object$
-                .createDeclarationProviderFactory(project, globalContext.getStorageManager(), syntheticFiles, filesScope);
+                .createDeclarationProviderFactory(project, globalContext.getStorageManager(), filesToAnalyze, filesScope);
 
         InjectorForLazyResolveWithJava resolveWithJava = new InjectorForLazyResolveWithJava(
                 project,
