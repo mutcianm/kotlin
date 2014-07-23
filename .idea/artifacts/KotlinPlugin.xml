@@ -30,6 +30,12 @@
             </element>
             <element id="module-output" name="eval4j" />
             <element id="module-output" name="frontend.android" />
+            <element id="library" level="project" name="kotlin-runtime" />
+            <element id="library" level="project" name="intellij-core" />
+            <element id="library" level="project" name="jps-model" />
+            <element id="module-output" name="Kotlin" />
+            <element id="library" level="project" name="protobuf-java" />
+            <element id="library" level="project" name="trove4j" />
           </element>
           <element id="library" level="project" name="javax.inject" />
           <element id="directory" name="jps">
