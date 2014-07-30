@@ -325,6 +325,7 @@
               </fileset>
               <fileset dir="${basedir}/compiler/frontend.java/src" includes="META-INF/services/**"/>
               <fileset dir="${basedir}/compiler/backend/src" includes="META-INF/services/**"/>
+              <fileset dir="${basedir}/compiler/cli/" includes="misc/**"/>
 
               <zipgroupfileset dir="${basedir}/lib" includes="*.jar"/>
               <zipgroupfileset dir="${basedir}/ideaSDK/core" includes="*.jar" excludes="util.jar"/>
@@ -568,9 +569,8 @@
               <assertions>
                 <enable/>
               </assertions>
-              <arg value="-src"/>
-              <arg value="@{src}"/>
-              <arg value="-output"/>
+              <arg line="@{src}"/>
+              <arg value="-d"/>
               <arg value="@{output}"/>
               <arg value="-noStdlib"/>
               <arg value="-classpath"/>
@@ -579,7 +579,7 @@
           </sequential>
         </macrodef>
 
-        <new_kotlinc src="${basedir}/core/builtins/src${path.separator}${basedir}/core/runtime.jvm/src${path.separator}${basedir}/core/reflection/src"
+        <new_kotlinc src="${basedir}/core/builtins/src ${basedir}/core/runtime.jvm/src ${basedir}/core/reflection/src"
                      output="${output}/classes/runtime"
                      classpath="${basedir}/core/runtime.jvm/src"/>
 

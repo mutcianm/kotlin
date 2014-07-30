@@ -62,7 +62,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.jar.*;
 
@@ -159,8 +158,8 @@ public class CompileEnvironmentUtil {
             method.setAccessible(true);
             method.invoke(null);
 
-            ArrayList<Module> answer = new ArrayList<Module>(AllModules.instance$.get());
-            AllModules.instance$.get().clear();
+            ArrayList<Module> answer = new ArrayList<Module>(AllModules.INSTANCE$.get());
+            AllModules.INSTANCE$.get().clear();
             return answer;
         }
         catch (Exception e) {
@@ -304,7 +303,7 @@ public class CompileEnvironmentUtil {
                             }
                         }
                     }
-                    return Unit.VALUE;
+                    return Unit.INSTANCE$;
                 }
             });
         }

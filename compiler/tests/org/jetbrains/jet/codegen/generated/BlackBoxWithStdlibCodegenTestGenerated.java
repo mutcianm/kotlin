@@ -91,6 +91,16 @@ public class BlackBoxWithStdlibCodegenTestGenerated extends AbstractBlackBoxCode
             JetTestUtils.assertAllTestsPresentByMetadata(this.getClass(), "org.jetbrains.jet.generators.tests.TestsPackage", new File("compiler/testData/codegen/boxWithStdlib/arrays"), Pattern.compile("^(.+)\\.kt$"), true);
         }
         
+        @TestMetadata("cloneArray.kt")
+        public void testCloneArray() throws Exception {
+            doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/arrays/cloneArray.kt");
+        }
+        
+        @TestMetadata("clonePrimitiveArrays.kt")
+        public void testClonePrimitiveArrays() throws Exception {
+            doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/arrays/clonePrimitiveArrays.kt");
+        }
+        
         @TestMetadata("kt3771.kt")
         public void testKt3771() throws Exception {
             doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/arrays/kt3771.kt");
@@ -611,6 +621,11 @@ public class BlackBoxWithStdlibCodegenTestGenerated extends AbstractBlackBoxCode
         @TestMetadata("genericParam.kt")
         public void testGenericParam() throws Exception {
             doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/dataClasses/genericParam.kt");
+        }
+        
+        @TestMetadata("kt5002.kt")
+        public void testKt5002() throws Exception {
+            doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/dataClasses/kt5002.kt");
         }
         
         @TestMetadata("mixedParams.kt")
@@ -1736,11 +1751,6 @@ public class BlackBoxWithStdlibCodegenTestGenerated extends AbstractBlackBoxCode
         @TestMetadata("kt1568.kt")
         public void testKt1568() throws Exception {
             doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/regressions/kt1568.kt");
-        }
-        
-        @TestMetadata("kt1733.kt")
-        public void testKt1733() throws Exception {
-            doTestWithStdlib("compiler/testData/codegen/boxWithStdlib/regressions/kt1733.kt");
         }
         
         @TestMetadata("kt1770.kt")

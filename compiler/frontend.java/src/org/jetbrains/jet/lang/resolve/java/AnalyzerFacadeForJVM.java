@@ -121,12 +121,13 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
             boolean addBuiltIns
     ) {
         GlobalContextImpl globalContext = ContextPackage.GlobalContext();
-
+        
         List<JetFile> filesToAnalyze = new ArrayList<JetFile>(syntheticFiles);
         searchAndAddAndroidDeclarations(project, filesToAnalyze);
 
-        DeclarationProviderFactory declarationProviderFactory = DeclarationProviderFactoryService.object$
+        DeclarationProviderFactory declarationProviderFactory = DeclarationProviderFactoryService.OBJECT$
                 .createDeclarationProviderFactory(project, globalContext.getStorageManager(), filesToAnalyze, filesScope);
+
 
         InjectorForLazyResolveWithJava resolveWithJava = new InjectorForLazyResolveWithJava(
                 project,
@@ -160,7 +161,7 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
             Predicate<PsiFile> filesToAnalyzeCompletely,
             ModuleDescriptorImpl module,
             List<String> moduleIds,
-            File incrementalCacheDir
+            IncrementalCache incrementalCache
     ) {
         GlobalContext globalContext = ContextPackage.GlobalContext();
         TopDownAnalysisParameters topDownAnalysisParameters = TopDownAnalysisParameters.create(
@@ -178,9 +179,7 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
         try {
             module.addFragmentProvider(DependencyKind.BINARIES, injector.getJavaDescriptorResolver().getPackageFragmentProvider());
 
-            IncrementalCacheProvider incrementalCacheProvider = IncrementalCacheProvider.object$.getInstance();
-            if (incrementalCacheDir != null && moduleIds != null && incrementalCacheProvider != null) {
-                IncrementalCache incrementalCache = incrementalCacheProvider.getIncrementalCache(incrementalCacheDir);
+            if (incrementalCache != null && moduleIds != null) {
                 for (String moduleId : moduleIds) {
                     module.addFragmentProvider(
                             DependencyKind.SOURCES,

@@ -40,7 +40,7 @@ class KDocSampleTest {
         val args = KDocArguments()
         args.kotlinHome = "../../../dist/kotlinc"
 
-        args.src = "src/test/sample"
+        args.freeArgs = listOf("src/test/sample")
 
         val outputDir = File("target/apidocs-sample")
         outputDir.rmrf()
@@ -50,7 +50,7 @@ class KDocSampleTest {
         classesOutputDir.rmrf()
         classesOutputDir.mkdirsProperly()
 
-        args.outputDir = classesOutputDir.getPath()
+        args.destination = classesOutputDir.getPath()
 
         args.docConfig.docOutputDir = outputDir.getPath()
         args.docConfig.title = "Sample"
@@ -58,7 +58,4 @@ class KDocSampleTest {
         val exitCode = compiler.exec(System.err, args)
         Assert.assertEquals(ExitCode.OK, exitCode)
     }
-
 }
-
-

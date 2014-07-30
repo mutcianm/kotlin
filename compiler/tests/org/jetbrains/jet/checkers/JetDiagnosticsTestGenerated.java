@@ -5856,6 +5856,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 doTest("compiler/testData/diagnostics/tests/objects/kt2240.kt");
             }
             
+            @TestMetadata("kt5527.kt")
+            public void testKt5527() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/objects/kt5527.kt");
+            }
+            
             @TestMetadata("objectLiteralExpressionTypeMismatch.kt")
             public void testObjectLiteralExpressionTypeMismatch() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/objects/objectLiteralExpressionTypeMismatch.kt");
@@ -5902,6 +5907,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
             @TestMetadata("AssignmentOperations.kt")
             public void testAssignmentOperations() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/operatorsOverloading/AssignmentOperations.kt");
+            }
+            
+            @TestMetadata("assignmentOperationsCheckReturnType.kt")
+            public void testAssignmentOperationsCheckReturnType() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/operatorsOverloading/assignmentOperationsCheckReturnType.kt");
             }
             
             @TestMetadata("IteratorAmbiguity.kt")
