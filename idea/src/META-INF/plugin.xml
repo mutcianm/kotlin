@@ -162,8 +162,8 @@
     <projectService serviceInterface="org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService"
                     serviceImplementation="org.jetbrains.jet.plugin.stubindex.resolve.PluginDeclarationProviderFactoryService"/>
 
-    <projectService serviceInterface="org.jetbrains.jet.lang.resolve.android.AndroidUIXmlParser"
-                    serviceImplementation="org.jetbrains.jet.plugin.android.IDEAndroidUIXmlParser"/>
+    <projectService serviceInterface="org.jetbrains.jet.lang.resolve.android.AndroidUIXmlProcessor"
+                    serviceImplementation="org.jetbrains.jet.plugin.android.IDEAndroidUIXmlProcessor"/>
 
     <errorHandler implementation="org.jetbrains.jet.plugin.reporter.KotlinReportSubmitter"/>
 
