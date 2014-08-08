@@ -52,6 +52,7 @@ import org.jetbrains.jps.incremental.messages.BuildMessage;
 import org.jetbrains.jps.incremental.messages.CompilerMessage;
 import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.model.module.JpsModule;
+import org.jetbrains.jps.model.module.JpsModuleSourceRoot;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -203,6 +204,7 @@ public class KotlinBuilder extends ModuleLevelBuilder {
             }
 
             K2JVMCompilerArguments k2JvmArguments = JpsKotlinCompilerSettings.getK2JvmCompilerArguments(project);
+            k2JvmArguments.androidRes = getAndroidResPath(project);
 
             runK2JvmCompiler(commonArguments, k2JvmArguments, compilerSettings, messageCollector, environment,
                              moduleFile, outputItemCollector);
@@ -281,6 +283,22 @@ public class KotlinBuilder extends ModuleLevelBuilder {
         finally {
             cache.close();
         }
+    }
+
+    private static String getAndroidResPath(JpsProject project) {
+        for (JpsModule module: project.getModules()) {
+            for (JpsModuleSourceRoot root: module.getSourceRoots()) {
+                File moduleRoot = root.getFile().getParentFile();
+                if (moduleRoot.isDirectory()) {
+                    for (File f : moduleRoot.listFiles()) {
+                        if (f.getName().endsWith("AndroidManifest.xml")) {
+                            return new File(moduleRoot.getAbsolutePath() + "/res/layout").getAbsolutePath();
+                        }
+                    }
+                }
+            }
+        }
+        return "";
     }
 
     private static Set<File> getAllCompiledFilesContainer(CompileContext context) {
