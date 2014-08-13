@@ -209,6 +209,7 @@ public class KotlinBuilder extends ModuleLevelBuilder {
 
             K2JVMCompilerArguments k2JvmArguments = JpsKotlinCompilerSettings.getK2JvmCompilerArguments(project);
             k2JvmArguments.androidRes = getAndroidResPath(representativeTarget.getModule(), context);
+            k2JvmArguments.androidManifest = getAndroidManifest(representativeTarget.getModule());
 
             runK2JvmCompiler(commonArguments, k2JvmArguments, compilerSettings, messageCollector, environment,
                              moduleFile, outputItemCollector);
@@ -289,11 +290,16 @@ public class KotlinBuilder extends ModuleLevelBuilder {
         }
     }
 
-   private static String getAndroidResPath(JpsModule module, CompileContext context) {
-       JpsAndroidModuleExtension extension = AndroidJpsUtil.getExtension(module);
-       File path = AndroidJpsUtil.getResourceDirForCompilationPath(extension);
-       return new File(path.getAbsolutePath() + "/layout").getAbsolutePath();
-   }
+    private static String getAndroidResPath(JpsModule module, CompileContext context) {
+        JpsAndroidModuleExtension extension = AndroidJpsUtil.getExtension(module);
+        File path = AndroidJpsUtil.getResourceDirForCompilationPath(extension);
+        return new File(path.getAbsolutePath() + "/layout").getAbsolutePath();
+    }
+
+    private static String getAndroidManifest(JpsModule module) {
+        JpsAndroidModuleExtension extension = AndroidJpsUtil.getExtension(module);
+        return AndroidJpsUtil.getManifestFileForCompilationPath(extension).getAbsolutePath();
+    }
 
     private static Set<File> getAllCompiledFilesContainer(CompileContext context) {
         Set<File> allCompiledFiles = ALL_COMPILED_FILES_KEY.get(context);
