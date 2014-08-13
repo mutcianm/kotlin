@@ -43,6 +43,8 @@ import org.jetbrains.jet.jps.incremental.IncrementalCacheImpl;
 import org.jetbrains.jet.preloading.ClassLoaderFactory;
 import org.jetbrains.jet.utils.PathUtil;
 import org.jetbrains.jps.ModuleChunk;
+import org.jetbrains.jps.android.AndroidJpsUtil;
+import org.jetbrains.jps.android.model.JpsAndroidModuleExtension;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.DirtyFilesHolder;
 import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor;
@@ -204,7 +206,7 @@ public class KotlinBuilder extends ModuleLevelBuilder {
             }
 
             K2JVMCompilerArguments k2JvmArguments = JpsKotlinCompilerSettings.getK2JvmCompilerArguments(project);
-            k2JvmArguments.androidRes = getAndroidResPath(project);
+            k2JvmArguments.androidRes = getAndroidResPath(representativeTarget.getModule(), context);
 
             runK2JvmCompiler(commonArguments, k2JvmArguments, compilerSettings, messageCollector, environment,
                              moduleFile, outputItemCollector);
@@ -285,21 +287,11 @@ public class KotlinBuilder extends ModuleLevelBuilder {
         }
     }
 
-    private static String getAndroidResPath(JpsProject project) {
-        for (JpsModule module: project.getModules()) {
-            for (JpsModuleSourceRoot root: module.getSourceRoots()) {
-                File moduleRoot = root.getFile().getParentFile();
-                if (moduleRoot.isDirectory()) {
-                    for (File f : moduleRoot.listFiles()) {
-                        if (f.getName().endsWith("AndroidManifest.xml")) {
-                            return new File(moduleRoot.getAbsolutePath() + "/res/layout").getAbsolutePath();
-                        }
-                    }
-                }
-            }
-        }
-        return "";
-    }
+   private static String getAndroidResPath(JpsModule module, CompileContext context) {
+       JpsAndroidModuleExtension extension = AndroidJpsUtil.getExtension(module);
+       File path = AndroidJpsUtil.getResourceDirForCompilationPath(extension);
+       return new File(path.getAbsolutePath() + "/layout").getAbsolutePath();
+   }
 
     private static Set<File> getAllCompiledFilesContainer(CompileContext context) {
         Set<File> allCompiledFiles = ALL_COMPILED_FILES_KEY.get(context);
