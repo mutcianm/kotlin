@@ -84,8 +84,7 @@ import static org.jetbrains.jet.lang.psi.PsiPackage.JetPsiFactory;
 import static org.jetbrains.jet.lang.resolve.BindingContext.*;
 import static org.jetbrains.jet.lang.resolve.BindingContextUtils.getNotNull;
 import static org.jetbrains.jet.lang.resolve.BindingContextUtils.isVarCapturedInClosure;
-import static org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage.getResolvedCall;
-import static org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage.getResolvedCallWithAssert;
+import static org.jetbrains.jet.lang.resolve.calls.callUtil.CallUtilPackage.*;
 import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.*;
 import static org.jetbrains.jet.lang.resolve.java.JvmAnnotationNames.KotlinSyntheticClass;
 import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.OtherOrigin;
@@ -2871,34 +2870,46 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     }
 
     private StackValue genCmpWithZero(JetExpression exp, Type expType, IElementType opToken) {
-        v.iconst(1);
         gen(exp, expType);
-        Label ok = new Label();
+        Label trueLabel = new Label();
+        Label afterLabel = new Label();
         if (JetTokens.EQEQ == opToken || JetTokens.EQEQEQ == opToken) {
-            v.ifeq(ok);
+            v.ifeq(trueLabel);
         }
         else {
-            v.ifne(ok);
+            v.ifne(trueLabel);
         }
-        v.pop();
+
         v.iconst(0);
-        v.mark(ok);
+        v.goTo(afterLabel);
+
+        v.mark(trueLabel);
+        v.iconst(1);
+
+        v.mark(afterLabel);
+
         return StackValue.onStack(Type.BOOLEAN_TYPE);
     }
 
     private StackValue genCmpWithNull(JetExpression exp, Type expType, IElementType opToken) {
-        v.iconst(1);
         gen(exp, boxType(expType));
-        Label ok = new Label();
+        Label trueLabel = new Label();
+        Label afterLabel = new Label();
         if (JetTokens.EQEQ == opToken || JetTokens.EQEQEQ == opToken) {
-            v.ifnull(ok);
+            v.ifnull(trueLabel);
         }
         else {
-            v.ifnonnull(ok);
+            v.ifnonnull(trueLabel);
         }
-        v.pop();
+
         v.iconst(0);
-        v.mark(ok);
+        v.goTo(afterLabel);
+
+        v.mark(trueLabel);
+        v.iconst(1);
+
+        v.mark(afterLabel);
+
         return StackValue.onStack(Type.BOOLEAN_TYPE);
     }
 
@@ -3336,7 +3347,6 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         for (ValueArgument va : expression.getValueArguments()) {
             args.add(va.getArgumentExpression());
         }
-        args.addAll(expression.getFunctionLiteralArguments());
 
         boolean isArray = KotlinBuiltIns.getInstance().isArray(arrayType);
         if (!isArray && args.size() != 1) {

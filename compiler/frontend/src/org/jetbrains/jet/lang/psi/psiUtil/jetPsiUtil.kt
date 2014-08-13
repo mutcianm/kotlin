@@ -318,15 +318,13 @@ public fun JetSimpleNameExpression.isImportDirectiveExpression(): Boolean {
     }
 }
 
-public fun JetElement.getCalleeExpressionIfAny(): JetExpression? {
-    val element = if (this is JetExpression) JetPsiUtil.safeDeparenthesize(this, false) else this
-    return when (element) {
-        is JetSimpleNameExpression -> element
-        is JetCallElement -> element.getCalleeExpression()
-        is JetQualifiedExpression -> element.getSelectorExpression()?.getCalleeExpressionIfAny()
-        is JetOperationExpression -> element.getOperationReference()
-        else -> null
+public fun JetElement.getTextWithLocation(): String = "'${this.getText()}' at ${DiagnosticUtils.atLocation(this)}"
+
+public fun JetExpression.isFunctionLiteralOutsideParentheses(): Boolean {
+    val parent = getParent()
+    return when (parent) {
+        is JetFunctionLiteralArgument -> true
+        is JetLabeledExpression -> parent.isFunctionLiteralOutsideParentheses()
+        else -> false
     }
 }
-
-public fun JetElement.getTextWithLocation(): String = "'${this.getText()}' at ${DiagnosticUtils.atLocation(this)}"

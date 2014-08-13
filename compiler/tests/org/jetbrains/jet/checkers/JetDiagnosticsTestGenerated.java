@@ -1435,6 +1435,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 doTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/UninitializedOrReassignedVariables.kt");
             }
             
+            @TestMetadata("unmappedArgs.kt")
+            public void testUnmappedArgs() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/unmappedArgs.kt");
+            }
+            
             @TestMetadata("varInitializationInIfInCycle.kt")
             public void testVarInitializationInIfInCycle() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/varInitializationInIfInCycle.kt");
@@ -1534,6 +1539,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 @TestMetadata("deadCodeInWhileFromBreak.kt")
                 public void testDeadCodeInWhileFromBreak() throws Exception {
                     doTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/deadCode/deadCodeInWhileFromBreak.kt");
+                }
+                
+                @TestMetadata("expressionInUnitLiteral.kt")
+                public void testExpressionInUnitLiteral() throws Exception {
+                    doTest("compiler/testData/diagnostics/tests/controlFlowAnalysis/deadCode/expressionInUnitLiteral.kt");
                 }
                 
                 @TestMetadata("kt2585_1.kt")
@@ -1765,6 +1775,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
             @TestMetadata("componentNamedComponent1.kt")
             public void testComponentNamedComponent1() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/dataClasses/componentNamedComponent1.kt");
+            }
+            
+            @TestMetadata("conflictingCopyOverloads.kt")
+            public void testConflictingCopyOverloads() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/dataClasses/conflictingCopyOverloads.kt");
             }
             
             @TestMetadata("conflictingOverloads.kt")
@@ -3488,6 +3503,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 doTest("compiler/testData/diagnostics/tests/functionLiterals/unusedLiteral.kt");
             }
             
+            @TestMetadata("unusedLiteralInsideUnitLiteral.kt")
+            public void testUnusedLiteralInsideUnitLiteral() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/functionLiterals/unusedLiteralInsideUnitLiteral.kt");
+            }
+            
             @TestMetadata("compiler/testData/diagnostics/tests/functionLiterals/return")
             public static class Return extends AbstractJetDiagnosticsTest {
                 public void testAllFilesPresentInReturn() throws Exception {
@@ -3804,6 +3824,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
             @TestMetadata("unresolvedArguments.kt")
             public void testUnresolvedArguments() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/incompleteCode/unresolvedArguments.kt");
+            }
+            
+            @TestMetadata("unresolvedOperation.kt")
+            public void testUnresolvedOperation() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/incompleteCode/unresolvedOperation.kt");
             }
             
             @TestMetadata("variableDeclarationInSelector.kt")

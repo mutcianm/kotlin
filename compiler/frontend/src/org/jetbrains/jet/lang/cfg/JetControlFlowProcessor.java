@@ -32,12 +32,14 @@ import org.jetbrains.jet.lang.cfg.pseudocode.instructions.eval.AccessTarget;
 import org.jetbrains.jet.lang.cfg.pseudocode.instructions.eval.InstructionWithValue;
 import org.jetbrains.jet.lang.cfg.pseudocode.instructions.eval.MagicKind;
 import org.jetbrains.jet.lang.descriptors.*;
+import org.jetbrains.jet.lang.descriptors.impl.AnonymousFunctionDescriptor;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.psi.psiUtil.PsiUtilPackage;
 import org.jetbrains.jet.lang.resolve.BindingContext;
 import org.jetbrains.jet.lang.resolve.BindingContextUtils;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
 import org.jetbrains.jet.lang.resolve.CompileTimeConstantUtils;
+import org.jetbrains.jet.lang.resolve.calls.callUtil.CallUtilPackage;
 import org.jetbrains.jet.lang.resolve.calls.model.*;
 import org.jetbrains.jet.lang.resolve.constants.CompileTimeConstant;
 import org.jetbrains.jet.lang.resolve.name.Name;
@@ -55,7 +57,7 @@ import java.util.*;
 
 import static org.jetbrains.jet.lang.cfg.JetControlFlowBuilder.PredefinedOperation.*;
 import static org.jetbrains.jet.lang.diagnostics.Errors.*;
-import static org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage.getResolvedCall;
+import static org.jetbrains.jet.lang.resolve.calls.callUtil.CallUtilPackage.getResolvedCall;
 import static org.jetbrains.jet.lexer.JetTokens.*;
 
 public class JetControlFlowProcessor {
@@ -99,6 +101,13 @@ public class JetControlFlowProcessor {
     }
 
     private void generateImplicitReturnValue(@NotNull JetExpression bodyExpression, @NotNull JetElement subroutine) {
+        CallableDescriptor subroutineDescriptor = (CallableDescriptor) trace.get(BindingContext.DECLARATION_TO_DESCRIPTOR, subroutine);
+        if (subroutineDescriptor == null) return;
+
+        JetType returnType = subroutineDescriptor.getReturnType();
+        KotlinBuiltIns builtIns = KotlinBuiltIns.getInstance();
+        if (returnType != null && builtIns.isUnit(returnType) && subroutineDescriptor instanceof AnonymousFunctionDescriptor) return;
+
         PseudoValue returnValue = builder.getBoundValue(bodyExpression);
         if (returnValue == null) return;
 
@@ -1112,10 +1121,6 @@ public class JetControlFlowProcessor {
                         inputExpressions.add(argumentExpression);
                     }
                 }
-                for (JetExpression functionLiteral : expression.getFunctionLiteralArguments()) {
-                    generateInstructions(functionLiteral);
-                    inputExpressions.add(functionLiteral);
-                }
                 JetExpression calleeExpression = expression.getCalleeExpression();
                 generateInstructions(calleeExpression);
                 inputExpressions.add(calleeExpression);
@@ -1489,11 +1494,16 @@ public class JetControlFlowProcessor {
             CallableDescriptor resultingDescriptor = resolvedCall.getResultingDescriptor();
             Map<PseudoValue, ReceiverValue> receivers = getReceiverValues(resolvedCall);
             SmartFMap<PseudoValue, ValueParameterDescriptor> parameterValues = SmartFMap.emptyMap();
-            for (ValueParameterDescriptor parameterDescriptor : resultingDescriptor.getValueParameters()) {
-                ResolvedValueArgument argument = resolvedCall.getValueArguments().get(parameterDescriptor);
-                if (argument == null) continue;
-
-                parameterValues = generateValueArgument(argument, parameterDescriptor, parameterValues);
+            for (ValueArgument argument : resolvedCall.getCall().getValueArguments()) {
+                ArgumentMapping argumentMapping = resolvedCall.getArgumentMapping(argument);
+                JetExpression argumentExpression = argument.getArgumentExpression();
+                if (argumentMapping instanceof ArgumentMatch) {
+                    parameterValues = generateValueArgument(argument, ((ArgumentMatch) argumentMapping).getValueParameter(), parameterValues);
+                }
+                else if (argumentExpression != null) {
+                    generateInstructions(argumentExpression);
+                    createSyntheticValue(argumentExpression, MagicKind.VALUE_CONSUMER, argumentExpression);
+                }
             }
 
             if (resultingDescriptor instanceof VariableDescriptor) {
@@ -1549,19 +1559,6 @@ public class JetControlFlowProcessor {
             }
 
             return receiverValues;
-        }
-
-        @NotNull
-        private SmartFMap<PseudoValue, ValueParameterDescriptor> generateValueArgument(
-                ResolvedValueArgument argument,
-                ValueParameterDescriptor parameterDescriptor,
-                SmartFMap<PseudoValue, ValueParameterDescriptor> parameterValues
-        ) {
-            for (ValueArgument valueArgument : argument.getArguments()) {
-                parameterValues = generateValueArgument(valueArgument, parameterDescriptor, parameterValues);
-            }
-
-            return parameterValues;
         }
 
         @NotNull
