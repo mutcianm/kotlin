@@ -58,7 +58,7 @@ import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.resolve.android.AndroidUIXmlProcessor;
 import org.jetbrains.jet.lang.resolve.android.CliAndroidUIXmlProcessor;
 import org.jetbrains.jet.lang.resolve.kotlin.KotlinBinaryClassCache;
-import org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinder;
+import org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinderFactory;
 import org.jetbrains.jet.lang.resolve.lazy.declarations.CliDeclarationProviderFactoryService;
 import org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService;
 import org.jetbrains.jet.plugin.JetFileType;
@@ -217,10 +217,10 @@ public class JetCoreEnvironment {
         JetScriptDefinitionProvider.getInstance(project).addScriptDefinitions(
                 configuration.getList(CommonConfigurationKeys.SCRIPT_DEFINITIONS_KEY));
 
+        project.registerService(VirtualFileFinderFactory.class, new CliVirtualFileFinderFactory(classPath));
         String androidResPath = configuration.get(JVMConfigurationKeys.ANDROID_RES_PATH);
         String androidManifest = configuration.get(JVMConfigurationKeys.ANDROID_MANIFEST);
         project.registerService(AndroidUIXmlProcessor.class, new CliAndroidUIXmlProcessor(project, androidResPath, androidManifest));
-        project.registerService(VirtualFileFinder.class, new CliVirtualFileFinder(classPath));
     }
 
     // made public for Upsource
