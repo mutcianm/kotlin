@@ -11,12 +11,8 @@ where possible options include:
   -script                    Evaluate the script file
   -kotlin-home <path>        Path to Kotlin compiler home directory, used for annotations and runtime libraries discovery
   -androidRes <path>         Android resources path
+  -androidManifest <path>    Android manifest file
   -nowarn                    Generate no warnings
-  -kotlinHome <path>         Path to Kotlin compiler home directory, used for annotations and runtime libraries discovery
-  -inline {on,off}           Inlining mode (default is on)
-  -optimize {on,off}         Optimization mode (default is on)
-  -androidRes <path>         Android resources path
-  -tags                      Demarcate each compilation message (error, warning, etc) with an open and close tag
   -verbose                   Enable verbose logging output
   -version                   Display compiler version
   -help (-h)                 Print a synopsis of standard options
