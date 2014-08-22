@@ -26,7 +26,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import org.jetbrains.jet.lang.psi.JetFile
 import org.jetbrains.jet.lang.resolve.android.AndroidConst.*
-import com.intellij.openapi.application.ApplicationManager
 
 abstract class AndroidUIXmlProcessor(protected val project: Project) {
 

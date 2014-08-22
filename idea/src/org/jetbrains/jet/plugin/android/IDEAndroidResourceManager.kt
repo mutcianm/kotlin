@@ -22,8 +22,6 @@ import com.intellij.psi.PsiElement
 import java.util.HashMap
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.PsiFile
-import org.jetbrains.android.util.AndroidResourceUtil
-import org.jetbrains.jps.android.AndroidJpsUtil
 import org.jetbrains.android.facet.AndroidFacet
 import org.jetbrains.jet.lang.resolve.android.AndroidManifest
 import com.intellij.openapi.module.ModuleManager
