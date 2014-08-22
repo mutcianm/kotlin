@@ -119,6 +119,7 @@ import org.jetbrains.jet.plugin.intentions.declarations.AbstractJoinLinesTest
 import org.jetbrains.jet.codegen.AbstractScriptCodegenTest
 import org.jetbrains.jet.plugin.parameterInfo.AbstractFunctionParameterInfoTest
 import org.jetbrains.jet.psi.patternMatching.AbstractJetPsiUnifierTest
+import org.jetbrains.jet.lang.resolve.android.AbstractAndroidXml2KConversionTest
 
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
@@ -282,6 +283,11 @@ fun main(args: Array<String>) {
 
         testClass(javaClass<AbstractKotlinLightClassTest>()) {
             model("asJava/lightClasses")
+        }
+
+        testClass(javaClass<AbstractAndroidXml2KConversionTest>()) {
+            model("android/converter/simple", recursive = false, extension = null)
+            model("android/converter/exceptions", recursive = false, extension = null, testMethod = "doNoManifestTest")
         }
     }
 
