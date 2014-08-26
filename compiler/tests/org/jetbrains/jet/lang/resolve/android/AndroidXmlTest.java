@@ -18,6 +18,7 @@ package org.jetbrains.jet.lang.resolve.android;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.testFramework.UsefulTestCase;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.*;
 import org.jetbrains.jet.cli.jvm.JVMConfigurationKeys;
@@ -34,7 +35,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
-public class AndroidXmlTest extends TestCaseWithTmpdir {
+public class AndroidXmlTest extends UsefulTestCase {
 
     private static final String singleFilePrefix = getTestDataPath() + "/converter/singleFile/";
     public static final String singleFileManifestPath = singleFilePrefix + "AndroidManifest.xml";
