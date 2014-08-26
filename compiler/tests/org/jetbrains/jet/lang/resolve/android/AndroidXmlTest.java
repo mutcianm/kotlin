@@ -95,6 +95,7 @@ public class AndroidXmlTest extends UsefulTestCase {
         List<File> files = addDefaultFiles();
 
         compileManyFilesGetGenerationState(files, singleFileResPath);
+        // TODO: why?
         Disposer.dispose(getTestRootDisposable());
     }
 
@@ -108,6 +109,7 @@ public class AndroidXmlTest extends UsefulTestCase {
         return files;
     }
 
+    // TODO: many tests
     public void testConverterOneFile() throws Exception {
         JetCoreEnvironment jetCoreEnvironment = getEnvironment(singleFileResPath);
         AndroidUIXmlProcessor parser = new CliAndroidUIXmlProcessor(jetCoreEnvironment.getProject(),
@@ -120,6 +122,7 @@ public class AndroidXmlTest extends UsefulTestCase {
         assertEquals(expected, actual);
     }
 
+    // todo: unify with box tests
     public void testGeneratedByteCode() throws Exception {
 
         String resPath = getTestDataPath() + "/converter/singleFile/res/layout/";
@@ -131,6 +134,7 @@ public class AndroidXmlTest extends UsefulTestCase {
         classLoader.loadFiles();
         Class<?> activity = classLoader.findClass("com.myapp.MyActivity");
         String res =(String) activity.getMethod("test").invoke(activity.newInstance());
+        // todo: why?
         Disposer.dispose(getTestRootDisposable());
         assertEquals("OK", res);
     }

@@ -17,43 +17,23 @@
 package org.jetbrains.jet.lang.resolve.android
 
 import com.intellij.testFramework.UsefulTestCase
-import java.io.File
-import java.io.IOException
-import java.util.Scanner
-import java.io.FileWriter
 import org.jetbrains.jet.cli.jvm.compiler.JetCoreEnvironment
-import org.jetbrains.jet.config.CompilerConfiguration
 import org.jetbrains.jet.JetTestUtils
 import org.jetbrains.jet.ConfigurationKind
 import org.jetbrains.jet.TestJdkKind
-import org.jetbrains.jet.cli.jvm.JVMConfigurationKeys
-import org.junit.Assert
-import kotlin.test.fail
+import org.jetbrains.jet.plugin.android.IDEAndroidUIXmlProcessor
 
-public abstract class AbstractAndroidXml2KConversionTest : UsefulTestCase() {
-
+public abstract class AbstractCrossParserTest : UsefulTestCase() {
     public fun doTest(path: String) {
         val jetCoreEnvironment = getEnvironment(path)
-        val parser = CliAndroidUIXmlProcessor(jetCoreEnvironment.getProject(), path + "/layout", path + "AndroidManifest.xml")
-
-        val actual = parser.parseToString()
-
-        JetTestUtils.assertEqualsToFile(File(path + "/layout.kt"), actual!!)
-    }
-
-    public fun doNoManifestTest(path: String) {
-        try {
-            doTest(path)
-            fail("NoAndroidManifestFound not thrown")
-        }
-        catch (e: AndroidUIXmlProcessor.NoAndroidManifestFound) {
-        }
+        val cliParser = CliAndroidUIXmlProcessor(jetCoreEnvironment.getProject(), path + "/layout", path + "AndroidManifest.xml")
+//        val ideParser = IDEAndroidUIXmlProcessor(jetCoreEnvironment.getProject(), path + "/layout", path + "AndroidManifest.xml")
     }
 
     private fun getEnvironment(testPath: String): JetCoreEnvironment {
         val configuration = JetTestUtils.compilerConfigurationForTests(ConfigurationKind.ALL, TestJdkKind.MOCK_JDK)
-//        configuration.put<String>(JVMConfigurationKeys.ANDROID_RES_PATH, testPath + "/layout")
-//        configuration.put<String>(JVMConfigurationKeys.ANDROID_MANIFEST, testPath + "/AndroidManifest.xml")
+        //        configuration.put<String>(JVMConfigurationKeys.ANDROID_RES_PATH, testPath + "/layout")
+        //        configuration.put<String>(JVMConfigurationKeys.ANDROID_MANIFEST, testPath + "/AndroidManifest.xml")
         return JetCoreEnvironment.createForTests(getTestRootDisposable()!!, configuration)
     }
 }

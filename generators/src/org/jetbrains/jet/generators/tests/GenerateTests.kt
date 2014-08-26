@@ -286,7 +286,8 @@ fun main(args: Array<String>) {
         }
 
         testClass(javaClass<AbstractAndroidXml2KConversionTest>()) {
-            model("android/converter", recursive = false, extension = null)
+            model("android/converter/simple", recursive = false, extension = null)
+            model("android/converter/exceptions", recursive = false, extension = null, testMethod = "doNoManifestTest")
         }
     }
 
