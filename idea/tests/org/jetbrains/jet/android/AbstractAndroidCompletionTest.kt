@@ -36,10 +36,17 @@ import com.intellij.codeInsight.CodeInsightSettings
 
 public abstract class AbstractAndroidCompletionTest : KotlinAndroidTestCase() {
     private var kotlinInternalModeOriginalValue: Boolean = false
+    private var autoCompleteSetting: Boolean = false
 
     override fun setUp() {
         super.setUp()
-        setAutoCompleteSetting(false)
+        autoCompleteSetting = setAutoCompleteSetting(false)
+    }
+
+    override fun tearDown() {
+        setAutoCompleteSetting(autoCompleteSetting)
+
+        super.tearDown()
     }
 
     private fun setAutoCompleteSetting(value: Boolean): Boolean {
@@ -55,6 +62,8 @@ public abstract class AbstractAndroidCompletionTest : KotlinAndroidTestCase() {
         }
         return oldValue
     }
+
+
 
     private fun completionType() = CompletionType.BASIC
 

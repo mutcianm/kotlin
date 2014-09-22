@@ -100,6 +100,7 @@ public abstract class KotlinAndroidTestCase extends KotlinAndroidTestCaseBase {
 
         super.setUp();
 
+        VfsRootAccess.allowRootAccess(JetTestCaseBuilder.getHomeDirectory());
         // this will throw an exception if we don't have a full Android SDK, so we need to do this first thing before any other setup
         String sdkPath = getTestSdkPath();
 
@@ -158,7 +159,6 @@ public abstract class KotlinAndroidTestCase extends KotlinAndroidTestCaseBase {
         }
 
         ((StartupManagerImpl) StartupManager.getInstance(getProject())).runPostStartupActivities();
-        VfsRootAccess.allowRootAccess(JetTestCaseBuilder.getHomeDirectory());
 
         kotlinInternalModeOriginalValue = KotlinInternalMode.OBJECT$.getEnabled();
         KotlinInternalMode.OBJECT$.setEnabled(true);
